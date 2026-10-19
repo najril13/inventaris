@@ -1,0 +1,103 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model JenisBarang {
+  id          String   @id
+  nama        String   @unique
+  deskripsi   String?  @db.Text
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  barang      Barang[] @relation("BarangKategori")
+}
+
+model Pengguna {
+  id               String      @id @default(cuid())
+  nama             String
+  email            String      @unique
+  password         String
+  role             String      @default("User")
+  status           String      @default("Active")
+  tanggalBergabung DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  sesi             Sesi[]
+  transaksi        Transaksi[]
+}
+
+model Sesi {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  penggunaId String
+  pengguna   Pengguna @relation(fields: [penggunaId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+}
+
+model Barang {
+  id          String       @id
+  nama        String
+  kategoriId  String
+  kategori    JenisBarang  @relation("BarangKategori", fields: [kategoriId], references: [id])
+  merek       String?
+  sku         String       @unique
+  kondisi     String       @default("BARU")
+  stok        Int          @default(0)
+  status      String       @default("TERSEDIA")
+  deskripsi   String?      @db.Text
+  lokasiRak   String?
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  units       UnitBarang[]
+  transaksi   Transaksi[]
+}
+
+model UnitBarang {
+  id           String      @id @default(cuid())
+  kodeUnit     String?     @unique
+  serialNumber String      @unique
+  barangId     String
+  barang       Barang      @relation(fields: [barangId], references: [id], onDelete: Cascade)
+  kondisi      String      @default("BAIK") // "BAIK", "RUSAK_RINGAN", "RUSAK_BERAT"
+  status       String      @default("TERSEDIA") // "TERSEDIA", "DIPINJAM", "RUSAK", "HILANG"
+  lokasiRak    String?
+  catatan      String?     @db.Text
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  transaksi    Transaksi[]
+}
+
+model Transaksi {
+  id             String      @id @default(cuid())
+  kodeTransaksi  String      @unique
+  penggunaId     String
+  pengguna       Pengguna    @relation(fields: [penggunaId], references: [id], onDelete: Cascade)
+  barangId       String
+  barang         Barang      @relation(fields: [barangId], references: [id], onDelete: Cascade)
+  unitId         String?
+  unit           UnitBarang? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  jumlah         Int         @default(1)
+  tanggalPinjam  DateTime    @default(now())
+  tenggatWaktu   DateTime
+  tanggalKembali DateTime?
+  keperluan      String?     @db.Text
+  status         String      @default("DIPINJAM") // "MENUNGGU", "DIPINJAM", "DIKEMBALIKAN", "DITOLAK", "TERLAMBAT", "DIBATALKAN"
+  catatan        String?     @db.Text
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
