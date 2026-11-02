@@ -51,6 +51,7 @@ type Props = {
   error: string | null;
   deletingId: string | null;
   onDelete: (id: string, nama: string) => void;
+  editBasePath?: string;
 };
 
 export function BarangTable({
@@ -59,6 +60,7 @@ export function BarangTable({
   error,
   deletingId,
   onDelete,
+  editBasePath = "/admin/barang",
 }: Props) {
   const totalItems = data.length;
 
@@ -196,7 +198,7 @@ export function BarangTable({
                     <td className="px-6 py-4 align-middle">
                       <div className="flex items-center justify-end gap-1">
                         <Link
-                          href={`/admin/barang/${item.id}`}
+                          href={`${editBasePath}/${item.id}`}
                           aria-label={`Edit ${item.nama}`}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800 hover:text-cyan-400"
                         >

@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
       {
         message:
           statusTransaksi === "MENUNGGU"
-            ? "Pengajuan peminjaman berhasil diajukan, menunggu persetujuan Admin"
+            ? "Pengajuan peminjaman berhasil diajukan, menunggu persetujuan Admin atau Petugas"
             : "Peminjaman berhasil dicatat",
         data: result,
       },

@@ -154,6 +154,15 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         if (oldStatus === "MENUNGGU" && newStatus === "DIPINJAM") {
           let chosenUnitId = assignUnitId || existing.unitId;
 
+          if (chosenUnitId) {
+            const checkUnit = await tx.unitBarang.findUnique({
+              where: { id: chosenUnitId },
+            });
+            if (!checkUnit || checkUnit.status !== "TERSEDIA") {
+              chosenUnitId = null;
+            }
+          }
+
           if (!chosenUnitId) {
             const availableUnit = await tx.unitBarang.findFirst({
               where: { barangId: existing.barangId, status: "TERSEDIA" },
@@ -163,13 +172,17 @@ export async function PATCH(request: NextRequest, { params }: Params) {
             }
           }
 
-          if (chosenUnitId) {
-            updateData.unitId = chosenUnitId;
-            await tx.unitBarang.update({
-              where: { id: chosenUnitId },
-              data: { status: "DIPINJAM" },
-            });
+          if (!chosenUnitId) {
+            throw new Error(
+              "Stok barang habis atau tidak ada unit fisik yang tersedia untuk disetujui"
+            );
           }
+
+          updateData.unitId = chosenUnitId;
+          await tx.unitBarang.update({
+            where: { id: chosenUnitId },
+            data: { status: "DIPINJAM" },
+          });
 
           const availableCount = await tx.unitBarang.count({
             where: { barangId: existing.barangId, status: "TERSEDIA" },

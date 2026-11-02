@@ -33,7 +33,12 @@ export default function LoginPage() {
         return;
       }
 
-      const tujuan = result.data.role === "Admin" ? "/admin" : "/user";
+      let tujuan = "/user";
+      if (result.data.role === "Admin") {
+        tujuan = "/admin";
+      } else if (result.data.role === "Petugas") {
+        tujuan = "/petugas";
+      }
       router.push(tujuan);
       router.refresh();
     } catch {
@@ -121,7 +126,7 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-zinc-500">
+        {/* <p className="mt-6 text-center text-xs text-zinc-500">
           Belum punya akun?{" "}
           <a
             href="/register"
@@ -133,7 +138,7 @@ export default function LoginPage() {
 
         <p className="mt-2 text-center text-xs text-zinc-600">
           Hubungi administrator jika lupa password
-        </p>
+        </p> */}
       </Card>
     </div>
   );
