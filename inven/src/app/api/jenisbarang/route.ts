@@ -28,9 +28,9 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== "Admin" && session.role !== "Petugas")) {
+    if (!session || session.role !== "Admin") {
       return NextResponse.json(
-        { error: "Akses ditolak. Wewenang Admin atau Petugas diperlukan." },
+        { error: "Hanya Admin yang berwenang menambahkan jenis barang" },
         { status: 403 },
       );
     }

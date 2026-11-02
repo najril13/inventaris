@@ -4,35 +4,25 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Button, Card } from "@heroui/react";
 import {
-  Archive,
   ArrowRight,
   Box,
   CheckCircle2,
   Check,
   Clock3,
-  Package,
   ShieldCheck,
   X,
   Loader2,
-  PackageX,
-  AlertTriangle,
+  RotateCcw,
+  Clock,
+  Layers,
 } from "lucide-react";
 import { toast } from "@/src/lib/toast";
-
-type BarangItem = {
-  id: string;
-  nama: string;
-  kategori?: { nama: string };
-  status: string;
-  stok: number;
-  createdAt: string;
-};
 
 type TransaksiRequest = {
   id: string;
   kodeTransaksi: string;
   pengguna: { nama: string; email: string };
-  barang: { nama: string };
+  barang: { nama: string; sku: string };
   unit?: { serialNumber: string } | null;
   tanggalPinjam: string;
   tenggatWaktu: string;
@@ -53,56 +43,36 @@ function formatDate(iso: string) {
 }
 
 export default function PetugasDashboardPage() {
-  const [totalBarang, setTotalBarang] = useState(0);
-  const [totalKategori, setTotalKategori] = useState(0);
   const [aktifPeminjaman, setAktifPeminjaman] = useState(0);
   const [menungguCount, setMenungguCount] = useState(0);
-  const [barangTersedia, setBarangTersedia] = useState(0);
-  const [barangHabis, setBarangHabis] = useState(0);
+  const [selesaiCount, setSelesaiCount] = useState(0);
+  const [totalTransaksi, setTotalTransaksi] = useState(0);
 
-  const [recentBarang, setRecentBarang] = useState<BarangItem[]>([]);
   const [pendingRequests, setPendingRequests] = useState<TransaksiRequest[]>([]);
+  const [activeLoans, setActiveLoans] = useState<TransaksiRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const loadDashboardData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [resBarang, resKategori, resTransaksi] = await Promise.all([
-        fetch("/api/barang"),
-        fetch("/api/jenisbarang"),
-        fetch("/api/transaksi"),
-      ]);
-
-      const dataBarang = await resBarang.json();
-      const dataKategori = await resKategori.json();
+      const resTransaksi = await fetch("/api/transaksi");
       const dataTransaksi = await resTransaksi.json();
 
-      if (Array.isArray(dataBarang.data)) {
-        setTotalBarang(dataBarang.data.length);
-        const tersedia = dataBarang.data.filter(
-          (b: BarangItem) => b.stok > 0 && b.status !== "HABIS",
-        ).length;
-        setBarangTersedia(tersedia);
-        setBarangHabis(dataBarang.data.length - tersedia);
-        setRecentBarang(dataBarang.data.slice(0, 5));
-      }
-
-      if (Array.isArray(dataKategori.data)) {
-        setTotalKategori(dataKategori.data.length);
-      }
-
       if (Array.isArray(dataTransaksi.data)) {
-        const aktif = dataTransaksi.data.filter(
-          (t: { status: string }) => t.status === "DIPINJAM",
-        ).length;
-        setAktifPeminjaman(aktif);
+        const txList: TransaksiRequest[] = dataTransaksi.data;
+        setTotalTransaksi(txList.length);
 
-        const pending = dataTransaksi.data.filter(
-          (t: { status: string }) => t.status === "MENUNGGU",
-        );
+        const aktif = txList.filter((t) => t.status === "DIPINJAM");
+        setAktifPeminjaman(aktif.length);
+        setActiveLoans(aktif.slice(0, 5));
+
+        const pending = txList.filter((t) => t.status === "MENUNGGU");
         setMenungguCount(pending.length);
         setPendingRequests(pending);
+
+        const selesai = txList.filter((t) => t.status === "DIKEMBALIKAN");
+        setSelesaiCount(selesai.length);
       }
     } catch (err) {
       console.error("Dashboard Petugas error:", err);
@@ -119,47 +89,56 @@ export default function PetugasDashboardPage() {
   const statData = useMemo(() => {
     return [
       {
-        title: "Total Barang",
-        value: totalBarang.toLocaleString("id-ID"),
-        information: "Katalog Inventaris",
-        icon: Package,
-        active: false,
-      },
-      {
-        title: "Total Kategori",
-        value: totalKategori.toLocaleString("id-ID"),
-        information: "Jenis Barang",
-        icon: Archive,
-        active: false,
-      },
-      {
         title: "Menunggu Persetujuan",
         value: menungguCount.toLocaleString("id-ID"),
         information: "Perlu Tindakan",
         icon: Clock3,
-        active: menungguCount > 0,
-        highlight: true,
+        tone: "amber" as const,
+        highlight: menungguCount > 0,
       },
       {
-        title: "Aktif Peminjaman",
+        title: "Sedang Dipinjam",
         value: aktifPeminjaman.toLocaleString("id-ID"),
-        information: "Sedang Dipinjam",
+        information: "Peminjaman Aktif",
         icon: Box,
-        active: true,
+        tone: "cyan" as const,
+        highlight: false,
+      },
+      {
+        title: "Telah Dikembalikan",
+        value: selesaiCount.toLocaleString("id-ID"),
+        information: "Peminjaman Selesai",
+        icon: CheckCircle2,
+        tone: "emerald" as const,
+        highlight: false,
+      },
+      {
+        title: "Total Permohonan",
+        value: totalTransaksi.toLocaleString("id-ID"),
+        information: "Seluruh Riwayat",
+        icon: Layers,
+        tone: "neutral" as const,
+        highlight: false,
       },
     ];
-  }, [totalBarang, totalKategori, menungguCount, aktifPeminjaman]);
+  }, [menungguCount, aktifPeminjaman, selesaiCount, totalTransaksi]);
 
   const handleDecision = async (
     id: string,
-    decision: "DISETUJUI" | "DITOLAK",
+    decision: "DISETUJUI" | "DITOLAK" | "DIKEMBALIKAN"
   ) => {
-    const target = pendingRequests.find((r) => r.id === id);
-    if (!target) return;
-
     setProcessingId(id);
     try {
-      const targetStatus = decision === "DISETUJUI" ? "DIPINJAM" : "DITOLAK";
+      let targetStatus = "DIPINJAM";
+      let msg = "Peminjaman disetujui";
+      if (decision === "DITOLAK") {
+        targetStatus = "DITOLAK";
+        msg = "Peminjaman ditolak";
+      } else if (decision === "DIKEMBALIKAN") {
+        targetStatus = "DIKEMBALIKAN";
+        msg = "Barang berhasil dikembalikan, stok dipulihkan";
+      }
+
       const res = await fetch(`/api/transaksi/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -169,23 +148,11 @@ export default function PetugasDashboardPage() {
       const result = await res.json();
 
       if (!res.ok) {
-        toast.error("Gagal memproses", result.error || "Terjadi kesalahan");
+        toast.error("Gagal memproses permohonan", result.error);
         return;
       }
 
-      if (decision === "DISETUJUI") {
-        toast.success(
-          "Peminjaman disetujui",
-          `${target.pengguna.nama} dapat mengambil ${target.barang.nama}`,
-        );
-      } else {
-        toast.error(
-          "Peminjaman ditolak",
-          `Permintaan ${target.pengguna.nama} untuk ${target.barang.nama} ditolak`,
-        );
-      }
-
-      setPendingRequests((prev) => prev.filter((r) => r.id !== id));
+      toast.success("Berhasil", msg);
       loadDashboardData();
     } catch {
       toast.error("Terjadi kesalahan", "Tidak dapat terhubung ke server");
@@ -194,105 +161,91 @@ export default function PetugasDashboardPage() {
     }
   };
 
+  const TONE_STYLE = {
+    amber: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
+    cyan: "bg-cyan-500/15 text-cyan-400 border border-cyan-500/30",
+    emerald: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+    neutral: "bg-zinc-800 text-zinc-300 border border-zinc-700",
+  };
+
   return (
     <div className="min-h-screen bg-[#101111] text-zinc-100">
-      <header className="flex min-h-17 items-center justify-between gap-5 border-b border-zinc-800 px-5 lg:px-8">
-        <div className="flex items-center gap-3">
-          <h1 className="whitespace-nowrap text-xl font-bold tracking-tight text-zinc-100 lg:text-2xl">
-            Dashboard Petugas
-          </h1>
-          <span className="flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-400">
-            <ShieldCheck size={14} />
-            Petugas Inventaris
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <Link href="/petugas/transaksi/hal_catatbarang">
-            <Button
-              size="sm"
-              className="bg-cyan-400 text-xs font-bold text-[#08181a] hover:bg-cyan-300"
-            >
-              Catat Peminjaman
-            </Button>
-          </Link>
-          <Link href="/petugas/barang/hal_barang">
-            <Button
-              size="sm"
-              variant="tertiary"
-              className="border border-zinc-700 bg-zinc-800/60 text-xs font-medium text-zinc-200 hover:bg-zinc-700"
-            >
-              Tambah Barang
-            </Button>
-          </Link>
-        </div>
-      </header>
-
       <main className="space-y-8 px-5 py-7 lg:px-8">
-        {/* STATS UTAMA */}
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {/* HEADER SECTION */}
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-lg bg-cyan-400/10 p-1.5 text-cyan-400">
+                <ShieldCheck size={20} />
+              </span>
+              <h1 className="text-3xl font-bold tracking-tight text-white">
+                Beranda Petugas
+              </h1>
+            </div>
+            <p className="mt-1 text-sm text-zinc-400">
+              Pusat persetujuan peminjaman barang dan pengawasan pemulangan unit inventaris oleh pengguna.
+            </p>
+          </div>
+
+          <Link href="/petugas/transaksi">
+            <Button className="flex items-center gap-2 rounded-xl bg-cyan-500 px-4 py-2.5 text-xs font-semibold text-[#08181a] hover:bg-cyan-400">
+              <span>Buka Kelola Transaksi</span>
+              <ArrowRight size={14} />
+            </Button>
+          </Link>
+        </section>
+
+        {/* STATISTIK CARDS */}
+        <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {statData.map((item) => {
             const Icon = item.icon;
             return (
               <Card
                 key={item.title}
-                className={`rounded-2xl border p-5 shadow-none transition duration-200 hover:-translate-y-0.5 ${
+                className={`rounded-2xl border p-5 shadow-none transition-all duration-200 hover:-translate-y-0.5 ${
                   item.highlight
-                    ? "border-amber-500/40 bg-[#1c1917]"
-                    : "border-zinc-800 bg-[#181919]"
+                    ? "border-amber-500/40 bg-amber-950/10"
+                    : "border-zinc-800 bg-[#181919] hover:border-zinc-700"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                      {item.title}
-                    </p>
-                    <p className="mt-2 text-3xl font-bold tracking-tight text-zinc-100">
-                      {isLoading ? "-" : item.value}
-                    </p>
-                  </div>
+                <div className="flex items-center gap-3.5">
                   <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-                      item.highlight
-                        ? "bg-amber-500/15 text-amber-400"
-                        : item.active
-                          ? "bg-cyan-500/15 text-cyan-400"
-                          : "bg-zinc-800 text-zinc-400"
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                      TONE_STYLE[item.tone]
                     }`}
                   >
-                    <Icon size={24} />
+                    <Icon size={20} strokeWidth={2.2} />
                   </div>
-                </div>
-                <div className="mt-4 flex items-center justify-between border-t border-zinc-800/80 pt-3">
-                  <span className="text-xs text-zinc-500">{item.information}</span>
-                  {item.highlight && menungguCount > 0 && (
-                    <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-400">
-                      <AlertTriangle size={12} />
-                      Menunggu respon
-                    </span>
-                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-zinc-400">
+                      {item.title}
+                    </p>
+                    <p className="mt-0.5 text-2xl font-bold tracking-tight text-white">
+                      {item.value}
+                    </p>
+                    <p className="text-[11px] text-zinc-500">{item.information}</p>
+                  </div>
                 </div>
               </Card>
             );
           })}
         </section>
 
-        {/* PERSETUJUAN PEMINJAMAN (QUICK ACTION) */}
+        {/* PERMOHONAN MENUNGGU PERSETUJUAN */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold tracking-tight text-zinc-100">
-                  Permohonan Peminjaman Menunggu Persetujuan
-                </h2>
+              <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                <Clock className="text-amber-400" size={18} />
+                Permohonan Menunggu Persetujuan
                 {pendingRequests.length > 0 && (
-                  <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-bold text-amber-400 border border-amber-500/30">
+                  <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-400 border border-amber-500/30">
                     {pendingRequests.length} Baru
                   </span>
                 )}
-              </div>
-              <p className="mt-0.5 text-xs text-zinc-500">
-                Setujui atau tolak pengajuan peminjaman barang dari siswa / guru sebelum barang dapat diambil.
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-400">
+                Permohonan peminjaman barang dari user yang memerlukan keputusan persetujuan dari petugas.
               </p>
             </div>
 
@@ -300,7 +253,7 @@ export default function PetugasDashboardPage() {
               href="/petugas/transaksi"
               className="group flex items-center gap-1 text-xs font-semibold text-cyan-400 transition hover:text-cyan-300"
             >
-              <span>Lihat Semua Transaksi</span>
+              <span>Lihat Semua</span>
               <ArrowRight
                 size={14}
                 className="transition-transform group-hover:translate-x-0.5"
@@ -334,7 +287,7 @@ export default function PetugasDashboardPage() {
                       <th className="px-6 py-3.5">Barang</th>
                       <th className="px-6 py-3.5">Serial Number</th>
                       <th className="px-6 py-3.5">Jadwal Pinjam</th>
-                      <th className="px-6 py-3.5 text-center">Tindakan</th>
+                      <th className="px-6 py-3.5 text-center">Tindakan Petugas</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/60">
@@ -366,11 +319,13 @@ export default function PetugasDashboardPage() {
                         </td>
                         <td className="px-6 py-4">
                           {req.unit?.serialNumber ? (
-                            <span className="inline-flex items-center gap-1 rounded bg-cyan-950/60 px-2 py-0.5 font-mono text-xs font-semibold text-cyan-400 border border-cyan-800/40">
+                            <span className="inline-flex items-center gap-1 rounded border border-cyan-800/40 bg-cyan-950/60 px-2 py-0.5 font-mono text-xs font-semibold text-cyan-400">
                               SN: {req.unit.serialNumber}
                             </span>
                           ) : (
-                            <span className="text-xs text-zinc-500">Otomatis saat disetujui</span>
+                            <span className="text-xs text-zinc-500">
+                              Otomatis saat disetujui
+                            </span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-xs">
@@ -412,140 +367,107 @@ export default function PetugasDashboardPage() {
           </Card>
         </section>
 
-        {/* STATUS STOK & BARANG TERBARU */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* KETERSEDIAAN STOK */}
-          <Card className="rounded-2xl border border-zinc-800 bg-[#181919] p-6 shadow-none">
-            <h2 className="text-base font-bold tracking-tight text-zinc-100">
-              Kondisi Stok Inventaris
-            </h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              Status ketersediaan katalog barang sekolah.
-            </p>
-
-            <div className="mt-5 space-y-4">
-              <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-[#121313] p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
-                    <CheckCircle2 size={20} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-zinc-400">
-                      Tersedia Dipinjam
-                    </p>
-                    <p className="text-lg font-bold text-zinc-100">
-                      {barangTersedia} Tipe Barang
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-[#121313] p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
-                    <PackageX size={20} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-zinc-400">
-                      Stok Habis / Sedang Dipinjam
-                    </p>
-                    <p className="text-lg font-bold text-zinc-100">
-                      {barangHabis} Tipe Barang
-                    </p>
-                  </div>
-                </div>
-              </div>
+        {/* PEMINJAMAN BERJALAN (SEDANG DIPINJAM) */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                <Box className="text-cyan-400" size={18} />
+                Peminjaman Aktif (Sedang Berjalan)
+              </h2>
+              <p className="mt-0.5 text-xs text-zinc-400">
+                Daftar unit barang yang sedang dipinjam oleh user dan belum dikembalikan.
+              </p>
             </div>
 
-            <div className="mt-6">
-              <Link href="/petugas/barang" className="w-full">
-                <Button className="w-full rounded-xl bg-zinc-800 text-xs font-semibold text-zinc-200 hover:bg-zinc-700">
-                  Lihat Seluruh Barang
-                </Button>
-              </Link>
-            </div>
-          </Card>
+            <Link
+              href="/petugas/transaksi"
+              className="group flex items-center gap-1 text-xs font-semibold text-cyan-400 transition hover:text-cyan-300"
+            >
+              <span>Kelola Seluruh Peminjaman</span>
+              <ArrowRight
+                size={14}
+                className="transition-transform group-hover:translate-x-0.5"
+              />
+            </Link>
+          </div>
 
-          {/* BARANG TERBARU */}
-          <Card className="col-span-1 rounded-2xl border border-zinc-800 bg-[#181919] p-6 shadow-none lg:col-span-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold tracking-tight text-zinc-100">
-                  Inventaris Barang Terbaru
-                </h2>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  Daftar 5 barang yang baru ditambahkan ke sistem.
+          <Card className="overflow-hidden rounded-2xl border border-zinc-800 bg-[#181919] shadow-none">
+            {isLoading ? (
+              <div className="flex items-center justify-center p-12">
+                <Loader2 className="animate-spin text-cyan-400" size={24} />
+              </div>
+            ) : activeLoans.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center">
+                <p className="text-sm font-medium text-zinc-400">
+                  Tidak ada barang yang sedang dipinjam saat ini.
                 </p>
               </div>
-
-              <Link
-                href="/petugas/barang"
-                className="group flex items-center gap-1 text-xs font-semibold text-cyan-400 transition hover:text-cyan-300"
-              >
-                <span>Katalog Lengkap</span>
-                <ArrowRight
-                  size={14}
-                  className="transition-transform group-hover:translate-x-0.5"
-                />
-              </Link>
-            </div>
-
-            <div className="mt-5 overflow-hidden rounded-xl border border-zinc-800/80">
+            ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-[#121313] text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                <table className="w-full min-w-160 text-left text-sm">
+                  <thead className="border-b border-zinc-800 bg-[#151616] text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                     <tr>
-                      <th className="px-5 py-3">Nama Barang</th>
-                      <th className="px-5 py-3">Kategori</th>
-                      <th className="px-5 py-3">Ketersediaan</th>
-                      <th className="px-5 py-3">Tanggal Input</th>
+                      <th className="px-6 py-3.5">Kode Transaksi</th>
+                      <th className="px-6 py-3.5">Peminjam</th>
+                      <th className="px-6 py-3.5">Barang & SN</th>
+                      <th className="px-6 py-3.5">Batas Pengembalian</th>
+                      <th className="px-6 py-3.5 text-center">Aksi Pengembalian</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/60 bg-[#181919]">
-                    {recentBarang.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className="px-5 py-8 text-center text-xs text-zinc-500"
-                        >
-                          Belum ada data barang.
+                  <tbody className="divide-y divide-zinc-800/60">
+                    {activeLoans.map((loan) => (
+                      <tr
+                        key={loan.id}
+                        className="transition-colors hover:bg-white/[0.02]"
+                      >
+                        <td className="px-6 py-4 font-mono text-xs font-bold text-cyan-400">
+                          {loan.kodeTransaksi}
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="font-semibold text-zinc-200">
+                            {loan.pengguna.nama}
+                          </p>
+                          <p className="text-[11px] text-zinc-500">
+                            {loan.pengguna.email}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="font-semibold text-zinc-200">
+                            {loan.barang.nama}
+                          </p>
+                          {loan.unit?.serialNumber && (
+                            <span className="inline-flex items-center rounded bg-cyan-950/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-cyan-400 border border-cyan-800/40">
+                              SN: {loan.unit.serialNumber}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-xs">
+                          <span className="font-semibold text-amber-400">
+                            {formatDate(loan.tenggatWaktu)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <Button
+                            size="sm"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-500/15 px-3 py-1.5 text-xs font-semibold text-cyan-400 hover:bg-cyan-500/25"
+                            isDisabled={processingId === loan.id}
+                            onPress={() =>
+                              handleDecision(loan.id, "DIKEMBALIKAN")
+                            }
+                          >
+                            <RotateCcw size={14} />
+                            Kembalikan
+                          </Button>
                         </td>
                       </tr>
-                    ) : (
-                      recentBarang.map((item) => (
-                        <tr
-                          key={item.id}
-                          className="transition-colors hover:bg-white/[0.02]"
-                        >
-                          <td className="px-5 py-3.5 font-medium text-zinc-200">
-                            {item.nama}
-                          </td>
-                          <td className="px-5 py-3.5 text-xs text-zinc-400">
-                            {item.kategori?.nama || "-"}
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <span
-                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                item.stok > 0
-                                  ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                                  : "border border-red-500/30 bg-red-500/10 text-red-400"
-                              }`}
-                            >
-                              {item.stok > 0 ? `${item.stok} Unit` : "Habis"}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3.5 text-xs text-zinc-500">
-                            {formatDate(item.createdAt)}
-                          </td>
-                        </tr>
-                      ))
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
-            </div>
+            )}
           </Card>
-        </div>
+        </section>
       </main>
     </div>
   );

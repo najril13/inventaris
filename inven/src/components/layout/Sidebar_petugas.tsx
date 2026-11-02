@@ -5,12 +5,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowLeftRight,
-  Boxes,
   ChevronRight,
-  HelpCircle,
   LayoutDashboard,
   LogOut,
-  Package,
   Settings,
   ShieldCheck,
 } from "lucide-react";
@@ -29,16 +26,6 @@ const navigationItems: NavigationItem[] = [
     icon: LayoutDashboard,
   },
   {
-    label: "Kelola Jenis Barang",
-    href: "/petugas/jenis_barang",
-    icon: Boxes,
-  },
-  {
-    label: "Kelola Barang",
-    href: "/petugas/barang",
-    icon: Package,
-  },
-  {
     label: "Kelola Transaksi",
     href: "/petugas/transaksi",
     icon: ArrowLeftRight,
@@ -47,11 +34,6 @@ const navigationItems: NavigationItem[] = [
     label: "Pengaturan Akun",
     href: "/petugas/pengaturan",
     icon: Settings,
-  },
-  {
-    label: "Pusat Bantuan",
-    href: "/petugas/bantuan",
-    icon: HelpCircle,
   },
 ];
 
@@ -73,7 +55,7 @@ export default function SidebarPetugas() {
             setProfileInitials(parts[0].slice(0, 2).toUpperCase());
           } else {
             setProfileInitials(
-              (parts[0][0] + parts[parts.length - 1][0]).toUpperCase(),
+              (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
             );
           }
         }
@@ -104,28 +86,27 @@ export default function SidebarPetugas() {
       <div className="border-b border-[#262929] px-8 py-8">
         <Link href="/petugas" className="group flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-400 transition group-hover:border-cyan-400/40 group-hover:bg-cyan-400/15">
-            <ShieldCheck size={24} strokeWidth={1.8} />
+            <ShieldCheck size={24} />
           </div>
 
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-cyan-400">
-              Petugas Panel
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold tracking-tight text-zinc-100 group-hover:text-cyan-400 transition-colors">
+              INVENTARIS
             </h1>
-
-            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-              Petugas Inventaris
-            </p>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-cyan-400/80">
+              Panel Petugas
+            </span>
           </div>
         </Link>
       </div>
 
       {/* NAVIGATION */}
-      <div className="flex-1 overflow-y-auto px-5 py-7">
-        <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
-          Menu Utama
-        </p>
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="mb-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+          Menu Operasional
+        </div>
 
-        <nav className="space-y-1.5">
+        <nav className="flex flex-col space-y-1.5">
           {navigationItems.map((item) => {
             const Icon = item.icon;
             const active = isMenuActive(item.href);
@@ -134,23 +115,23 @@ export default function SidebarPetugas() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group relative flex min-h-12 w-full items-center gap-3 rounded-lg px-3.5 text-left text-sm font-medium transition-all duration-200 ${
+                className={`group relative flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
                   active
                     ? "bg-cyan-400/10 text-cyan-400"
-                    : "text-zinc-400 hover:bg-white/[0.035] hover:text-zinc-100"
+                    : "text-zinc-400 hover:bg-[#202222] hover:text-zinc-200"
                 }`}
               >
                 {active && (
-                  <span className="absolute -left-5 h-7 w-0.75 rounded-r-full bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.65)]" />
+                  <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-cyan-400" />
                 )}
 
                 <Icon
-                  size={19}
-                  strokeWidth={active ? 2.1 : 1.8}
+                  size={20}
+                  strokeWidth={active ? 2.2 : 1.8}
                   className={
                     active
                       ? "text-cyan-400"
-                      : "text-zinc-500 transition-colors group-hover:text-zinc-300"
+                      : "text-zinc-500 transition group-hover:text-zinc-300"
                   }
                 />
 
@@ -193,7 +174,7 @@ export default function SidebarPetugas() {
                   <AlertDialog.Body>
                     <p>
                       Anda perlu login kembali untuk mengakses akun ini.
-                      Pastikan seluruh perubahan sudah tersimpan.
+                      Pastikan seluruh persetujuan transaksi sudah selesai diproses.
                     </p>
                   </AlertDialog.Body>
                   <AlertDialog.Footer>

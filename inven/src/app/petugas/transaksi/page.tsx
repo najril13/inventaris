@@ -1,23 +1,19 @@
 "use client";
 
-import Link from "next/link";
 import { Card, Button } from "@heroui/react";
 import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Plus,
   Search,
-  Pencil,
-  Trash2,
   RotateCcw,
   Check,
   X,
   Loader2,
-  Package,
+  Inbox,
+  ShieldCheck,
 } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { ConfirmDialog } from "@/src/components/kelola_barang/ConfirmDialog";
 import { toast } from "@/src/lib/toast";
 
 type TransaksiItem = {
@@ -76,12 +72,6 @@ export default function PetugasKelolaTransaksiPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
-
-  // State untuk dialog hapus
-  const [deleteTarget, setDeleteTarget] = useState<TransaksiItem | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // State untuk aksi status (setujui, tolak, kembalikan)
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const fetchTransaksi = useCallback(async () => {
@@ -109,27 +99,26 @@ export default function PetugasKelolaTransaksiPage() {
   // Aksi Update Status (Setujui / Tolak / Kembalikan)
   const handleUpdateStatus = async (
     id: string,
-    newStatus: TransaksiItem["status"],
-    successMsg: string,
+    nextStatus: string,
+    successMessage: string
   ) => {
     setUpdatingId(id);
     try {
       const res = await fetch(`/api/transaksi/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: nextStatus }),
       });
+
       const result = await res.json();
 
       if (!res.ok) {
-        toast.error("Gagal memperbarui status", result.error || "Terjadi kesalahan");
+        toast.error("Gagal memperbarui status", result.error);
         return;
       }
 
-      toast.success("Berhasil", successMsg);
-      setData((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t)),
-      );
+      toast.success("Berhasil", successMessage);
+      fetchTransaksi();
     } catch {
       toast.error("Terjadi kesalahan", "Tidak dapat terhubung ke server");
     } finally {
@@ -137,54 +126,70 @@ export default function PetugasKelolaTransaksiPage() {
     }
   };
 
-  // Aksi Hapus Transaksi
-  const handleConfirmDelete = async () => {
-    if (!deleteTarget) return;
+  // Ringkasan Statistik
+  const menungguCount = data.filter((t) => t.status === "MENUNGGU").length;
+  const dipinjamCount = data.filter((t) => t.status === "DIPINJAM").length;
+  const kembaliCount = data.filter((t) => t.status === "DIKEMBALIKAN").length;
+  const ditolakCount = data.filter(
+    (t) => t.status === "DITOLAK" || t.status === "DIBATALKAN"
+  ).length;
 
-    setIsDeleting(true);
-    try {
-      const res = await fetch(`/api/transaksi/${deleteTarget.id}`, {
-        method: "DELETE",
-      });
-      const result = await res.json();
+  const statCards = [
+    {
+      label: "Menunggu Persetujuan",
+      value: menungguCount,
+      icon: Clock,
+      tone: "amber" as const,
+      highlight: menungguCount > 0,
+      filterKey: "MENUNGGU",
+    },
+    {
+      label: "Sedang Dipinjam",
+      value: dipinjamCount,
+      icon: RotateCcw,
+      tone: "cyan" as const,
+      filterKey: "DIPINJAM",
+    },
+    {
+      label: "Telah Dikembalikan",
+      value: kembaliCount,
+      icon: CheckCircle2,
+      tone: "emerald" as const,
+      filterKey: "DIKEMBALIKAN",
+    },
+    {
+      label: "Ditolak / Dibatalkan",
+      value: ditolakCount,
+      icon: X,
+      tone: "neutral" as const,
+      filterKey: "DITOLAK",
+    },
+  ];
 
-      if (!res.ok) {
-        toast.error("Gagal menghapus transaksi", result.error);
-        setIsDeleting(false);
-        return;
-      }
-
-      toast.success("Transaksi dihapus", "Catatan transaksi berhasil dihapus");
-      setData((prev) => prev.filter((t) => t.id !== deleteTarget.id));
-      setDeleteTarget(null);
-    } catch {
-      toast.error("Terjadi kesalahan", "Tidak dapat terhubung ke server");
-    } finally {
-      setIsDeleting(false);
-    }
+  const TONE_STYLE = {
+    amber: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
+    cyan: "bg-cyan-500/15 text-cyan-400 border border-cyan-500/30",
+    emerald: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+    neutral: "bg-zinc-800 text-zinc-300 border border-zinc-700",
   };
 
-  // Ringkasan Statistik
-  const ringkasan = useMemo(() => {
-    const total = data.length;
-    const menunggu = data.filter((t) => t.status === "MENUNGGU").length;
-    const dipinjam = data.filter((t) => t.status === "DIPINJAM").length;
-    const terlambat = data.filter((t) => t.status === "TERLAMBAT").length;
-    const dikembalikan = data.filter((t) => t.status === "DIKEMBALIKAN").length;
-    return { total, menunggu, dipinjam, terlambat, dikembalikan };
-  }, [data]);
-
-  // Filter Data
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const matchQuery =
         item.kodeTransaksi.toLowerCase().includes(query.toLowerCase()) ||
         item.pengguna.nama.toLowerCase().includes(query.toLowerCase()) ||
         item.barang.nama.toLowerCase().includes(query.toLowerCase()) ||
-        Boolean(item.unit?.serialNumber?.toLowerCase().includes(query.toLowerCase()));
+        (item.unit?.serialNumber &&
+          item.unit.serialNumber.toLowerCase().includes(query.toLowerCase()));
 
-      const matchStatus =
-        selectedStatus === "ALL" || item.status === selectedStatus;
+      let matchStatus = true;
+      if (selectedStatus === "ALL") {
+        matchStatus = true;
+      } else if (selectedStatus === "DITOLAK") {
+        matchStatus = item.status === "DITOLAK" || item.status === "DIBATALKAN";
+      } else {
+        matchStatus = item.status === selectedStatus;
+      }
 
       return matchQuery && matchStatus;
     });
@@ -234,135 +239,134 @@ export default function PetugasKelolaTransaksiPage() {
   return (
     <main className="space-y-8 px-5 py-7 lg:px-8">
       {/* HEADER */}
-      <section className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <section className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-white">
-            Kelola Transaksi (Petugas)
-          </h2>
+          <div className="flex items-center gap-2">
+            <span className="rounded-lg bg-cyan-400/10 p-1.5 text-cyan-400">
+              <ShieldCheck size={20} />
+            </span>
+            <h2 className="text-3xl font-bold tracking-tight text-white">
+              Persetujuan Peminjaman
+            </h2>
+          </div>
           <p className="mt-1.5 text-sm text-zinc-400">
-            Pantau peminjaman, setujui pengajuan siswa, dan catat pengembalian barang.
+            Tinjau, setujui, atau tolak permohonan peminjaman barang dari user, serta proses pengembalian unit fisik inventaris.
           </p>
         </div>
 
-        <Link href="/petugas/transaksi/hal_catatbarang">
-          <button
-            type="button"
-            className="flex h-11 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-5 text-sm font-bold tracking-wide text-[#08181a] transition hover:bg-cyan-300 cursor-pointer"
-          >
-            <Plus size={18} strokeWidth={2.5} />
-            Catat Peminjaman
-          </button>
-        </Link>
+        {menungguCount > 0 && (
+          <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-300">
+            <Clock size={16} className="shrink-0" />
+            <span>
+              Ada <strong>{menungguCount}</strong> permohonan pinjaman menunggu persetujuan Anda
+            </span>
+          </div>
+        )}
       </section>
 
       {/* STAT CARDS */}
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Card className="rounded-2xl border border-zinc-800 bg-[#181919] p-4 shadow-none">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
-              <Clock size={20} />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-zinc-500">Menunggu</p>
-              <p className="text-xl font-bold text-white">{ringkasan.menunggu}</p>
-            </div>
-          </div>
-        </Card>
+        {statCards.map((stat) => {
+          const Icon = stat.icon;
+          const isSelected = selectedStatus === stat.filterKey;
 
-        <Card className="rounded-2xl border border-zinc-800 bg-[#181919] p-4 shadow-none">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400">
-              <Package size={20} />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-zinc-500">Dipinjam</p>
-              <p className="text-xl font-bold text-white">{ringkasan.dipinjam}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="rounded-2xl border border-zinc-800 bg-[#181919] p-4 shadow-none">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
-              <AlertTriangle size={20} />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-zinc-500">Terlambat</p>
-              <p className="text-xl font-bold text-white">{ringkasan.terlambat}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="rounded-2xl border border-zinc-800 bg-[#181919] p-4 shadow-none">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
-              <CheckCircle2 size={20} />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-zinc-500">Dikembalikan</p>
-              <p className="text-xl font-bold text-white">{ringkasan.dikembalikan}</p>
-            </div>
-          </div>
-        </Card>
+          return (
+            <Card
+              key={stat.label}
+              onClick={() =>
+                setSelectedStatus(isSelected ? "ALL" : stat.filterKey)
+              }
+              className={`cursor-pointer rounded-2xl border p-4 shadow-none transition-all duration-200 hover:-translate-y-0.5 ${
+                isSelected
+                  ? "border-cyan-400 bg-cyan-950/20"
+                  : stat.highlight
+                  ? "border-amber-500/40 bg-[#181919]"
+                  : "border-zinc-800 bg-[#181919] hover:border-zinc-700"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                    TONE_STYLE[stat.tone]
+                  }`}
+                >
+                  <Icon size={18} strokeWidth={2.2} />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-medium text-zinc-400">
+                    {stat.label}
+                  </p>
+                  <p className="text-2xl font-bold tracking-tight text-white">
+                    {stat.value}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
       </section>
 
-      {/* TABLE CONTAINER */}
-      <Card className="overflow-hidden rounded-2xl border border-zinc-800/80 bg-[#181919] p-0 shadow-none">
-        {/* CONTROLS */}
-        <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex h-11 w-full max-w-md items-center gap-3 rounded-xl border border-zinc-700/60 bg-[#101111] px-4 focus-within:border-cyan-500">
-            <Search size={18} className="text-zinc-500" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari kode, peminjam, barang, atau serial number..."
-              className="w-full bg-transparent text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="h-11 rounded-xl border border-zinc-700/60 bg-[#101111] px-4 text-xs font-medium text-zinc-300 outline-none cursor-pointer focus:border-cyan-500"
+      {/* FILTER & PENCARIAN */}
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { key: "ALL", label: "Semua Transaksi", count: data.length },
+            { key: "MENUNGGU", label: "Menunggu", count: menungguCount },
+            { key: "DIPINJAM", label: "Dipinjam", count: dipinjamCount },
+            { key: "DIKEMBALIKAN", label: "Dikembalikan", count: kembaliCount },
+            { key: "DITOLAK", label: "Ditolak / Batal", count: ditolakCount },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setSelectedStatus(tab.key)}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition cursor-pointer ${
+                selectedStatus === tab.key
+                  ? "bg-cyan-500 text-[#08181a]"
+                  : "border border-zinc-800 bg-[#181919] text-zinc-400 hover:border-zinc-700 hover:text-white"
+              }`}
             >
-              <option value="ALL">Semua Status</option>
-              <option value="MENUNGGU">Menunggu Persetujuan</option>
-              <option value="DIPINJAM">Dipinjam (Aktif)</option>
-              <option value="TERLAMBAT">Terlambat</option>
-              <option value="DIKEMBALIKAN">Dikembalikan</option>
-              <option value="DITOLAK">Ditolak / Batal</option>
-            </select>
-          </div>
+              <span>{tab.label}</span>
+              <span
+                className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                  selectedStatus === tab.key
+                    ? "bg-[#08181a]/20 text-[#08181a]"
+                    : "bg-zinc-800 text-zinc-400"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          ))}
         </div>
 
-        {/* TABLE */}
-        <div className="overflow-x-auto border-t border-zinc-800/80">
-          <table className="w-full min-w-220 border-collapse text-left text-sm">
+        {/* SEARCH BAR */}
+        <div className="flex h-11 items-center gap-3 rounded-xl border border-zinc-700 bg-[#181919] px-4 transition-colors focus-within:border-cyan-500 sm:w-80">
+          <Search size={18} className="shrink-0 text-zinc-400" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari kode, peminjam, barang..."
+            className="h-full w-full bg-transparent text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
+          />
+        </div>
+      </section>
+
+      {/* TABEL PERSETUJUAN TRANSAKSI */}
+      <Card className="overflow-hidden rounded-2xl border border-zinc-800 bg-[#181919] shadow-none">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-180 border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-zinc-800/80 bg-[#181919]">
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Kode Transaksi
-                </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Peminjam
-                </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Barang (Jumlah)
-                </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Tgl Pinjam & Batas
-                </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Status
-                </th>
-                <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Aksi
-                </th>
+              <tr className="border-b border-zinc-800 bg-[#121313] text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                <th className="px-6 py-4">Kode / Waktu</th>
+                <th className="px-6 py-4">Peminjam</th>
+                <th className="px-6 py-4">Barang & Nomor Seri</th>
+                <th className="px-6 py-4">Jadwal Pinjam</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-center">Tindakan Persetujuan</th>
               </tr>
             </thead>
-
             <tbody className="divide-y divide-zinc-800/60">
               {isLoading ? (
                 <tr>
@@ -377,18 +381,25 @@ export default function PetugasKelolaTransaksiPage() {
                 </tr>
               ) : filteredData.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="px-6 py-12 text-center text-zinc-500"
-                  >
-                    Tidak ada transaksi yang cocok.
+                  <td colSpan={6} className="px-6 py-16 text-center text-zinc-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Inbox size={32} className="text-zinc-600" />
+                      <p className="text-sm font-medium text-zinc-400">
+                        Tidak ada transaksi peminjaman yang cocok.
+                      </p>
+                      {selectedStatus === "MENUNGGU" && (
+                        <p className="text-xs text-zinc-500">
+                          Bagus! Tidak ada permohonan baru yang tertunda.
+                        </p>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filteredData.map((item) => (
                   <tr
                     key={item.id}
-                    className="transition-colors hover:bg-white/2"
+                    className="transition-colors hover:bg-white/[0.02]"
                   >
                     {/* KODE */}
                     <td className="px-6 py-4">
@@ -396,8 +407,8 @@ export default function PetugasKelolaTransaksiPage() {
                         {item.kodeTransaksi}
                       </span>
                       {item.keperluan && (
-                        <p className="mt-1 line-clamp-1 text-xs text-zinc-500">
-                          {item.keperluan}
+                        <p className="mt-1 line-clamp-1 text-xs text-zinc-400 italic">
+                          &quot;{item.keperluan}&quot;
                         </p>
                       )}
                     </td>
@@ -405,7 +416,7 @@ export default function PetugasKelolaTransaksiPage() {
                     {/* PEMINJAM */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs font-bold text-zinc-300 border border-zinc-700">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800 text-xs font-bold text-zinc-300">
                           {getInitials(item.pengguna.nama)}
                         </div>
                         <div className="flex flex-col">
@@ -425,17 +436,17 @@ export default function PetugasKelolaTransaksiPage() {
                         <span className="font-medium text-zinc-200">
                           {item.barang.nama}
                         </span>
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <span className="text-xs text-zinc-500">
                             SKU: {item.barang.sku}
                           </span>
                           {item.unit?.serialNumber ? (
-                            <span className="inline-flex items-center gap-1 rounded bg-cyan-950/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-cyan-400 border border-cyan-800/40">
+                            <span className="inline-flex items-center gap-1 rounded border border-cyan-800/40 bg-cyan-950/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-cyan-400">
                               SN: {item.unit.serialNumber}
                             </span>
                           ) : (
                             <span className="text-xs text-zinc-500">
-                              • {item.jumlah} unit
+                              • Otomatis saat disetujui
                             </span>
                           )}
                         </div>
@@ -448,97 +459,94 @@ export default function PetugasKelolaTransaksiPage() {
                         <span className="text-zinc-400">
                           Pinjam: {formatDate(item.tanggalPinjam)}
                         </span>
-                        <span className="font-medium text-amber-400/90">
+                        <span className="font-semibold text-amber-400/90">
                           Batas: {formatDate(item.tenggatWaktu)}
                         </span>
+                        {item.tanggalKembali && (
+                          <span className="text-[11px] text-emerald-400">
+                            Kembali: {formatDate(item.tanggalKembali)}
+                          </span>
+                        )}
                       </div>
                     </td>
 
                     {/* STATUS */}
-                    <td className="px-6 py-4">{renderStatusBadge(item.status)}</td>
-
-                    {/* AKSI */}
                     <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {/* Jika MENUNGGU -> tombol Setujui & Tolak */}
+                      {renderStatusBadge(item.status)}
+                    </td>
+
+                    {/* AKSI PERSETUJUAN */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        {/* Jika MENUNGGU -> Tombol SETUJUI & TOLAK */}
                         {item.status === "MENUNGGU" && (
                           <>
                             <Button
                               size="sm"
-                              isIconOnly
                               onPress={() =>
                                 handleUpdateStatus(
                                   item.id,
                                   "DIPINJAM",
-                                  "Peminjaman disetujui, stok barang dikurangi",
+                                  "Peminjaman disetujui, stok barang dikurangi"
                                 )
                               }
                               isDisabled={updatingId === item.id}
-                              className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                              aria-label="Setujui Peminjaman"
+                              className="flex h-8 items-center gap-1.5 rounded-lg bg-emerald-500/15 px-3 text-xs font-bold text-emerald-400 hover:bg-emerald-500/25"
                             >
-                              <Check size={16} />
+                              <Check size={14} strokeWidth={2.5} />
+                              Setujui
                             </Button>
                             <Button
                               size="sm"
-                              isIconOnly
                               onPress={() =>
                                 handleUpdateStatus(
                                   item.id,
                                   "DITOLAK",
-                                  "Peminjaman ditolak",
+                                  "Peminjaman ditolak"
                                 )
                               }
                               isDisabled={updatingId === item.id}
-                              className="h-8 w-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                              aria-label="Tolak Peminjaman"
+                              className="flex h-8 items-center gap-1.5 rounded-lg bg-red-500/15 px-3 text-xs font-bold text-red-400 hover:bg-red-500/25"
                             >
-                              <X size={16} />
+                              <X size={14} strokeWidth={2.5} />
+                              Tolak
                             </Button>
                           </>
                         )}
 
-                        {/* Jika DIPINJAM atau TERLAMBAT -> tombol Kembalikan */}
-                        {(item.status === "DIPINJAM" || item.status === "TERLAMBAT") && (
+                        {/* Jika DIPINJAM atau TERLAMBAT -> Tombol KEMBALIKAN */}
+                        {(item.status === "DIPINJAM" ||
+                          item.status === "TERLAMBAT") && (
                           <Button
                             size="sm"
                             onPress={() =>
                               handleUpdateStatus(
                                 item.id,
                                 "DIKEMBALIKAN",
-                                "Barang berhasil dikembalikan, stok dipulihkan",
+                                "Barang berhasil dikembalikan, stok dipulihkan"
                               )
                             }
                             isDisabled={updatingId === item.id}
-                            className="flex h-8 items-center gap-1.5 rounded-lg bg-cyan-500/15 px-2.5 text-xs font-semibold text-cyan-400 hover:bg-cyan-500/25"
+                            className="flex h-8 items-center gap-1.5 rounded-lg bg-cyan-500/15 px-3 text-xs font-semibold text-cyan-400 hover:bg-cyan-500/25"
                           >
-                            <RotateCcw size={14} />
+                            <RotateCcw size={14} strokeWidth={2.2} />
                             Kembalikan
                           </Button>
                         )}
 
-                        {/* Tombol Edit */}
-                        <Link href={`/petugas/transaksi/hal_catatbarang?id=${item.id}`}>
-                          <Button
-                            size="sm"
-                            isIconOnly
-                            className="h-8 w-8 rounded-lg bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
-                            aria-label="Edit Transaksi"
-                          >
-                            <Pencil size={15} />
-                          </Button>
-                        </Link>
+                        {/* Jika SUDAH SELESAI */}
+                        {item.status === "DIKEMBALIKAN" && (
+                          <span className="text-xs text-zinc-500">
+                            Selesai dikembalikan
+                          </span>
+                        )}
 
-                        {/* Tombol Hapus */}
-                        <Button
-                          size="sm"
-                          isIconOnly
-                          onPress={() => setDeleteTarget(item)}
-                          className="h-8 w-8 rounded-lg bg-zinc-800 text-zinc-400 hover:bg-red-500/10 hover:text-red-400"
-                          aria-label="Hapus Transaksi"
-                        >
-                          <Trash2 size={15} />
-                        </Button>
+                        {(item.status === "DITOLAK" ||
+                          item.status === "DIBATALKAN") && (
+                          <span className="text-xs text-zinc-500">
+                            Tidak aktif
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -548,20 +556,6 @@ export default function PetugasKelolaTransaksiPage() {
           </table>
         </div>
       </Card>
-
-      {/* DIALOG KONFIRMASI HAPUS */}
-      <ConfirmDialog
-        isOpen={Boolean(deleteTarget)}
-        title="Hapus Catatan Transaksi?"
-        description={
-          deleteTarget
-            ? `Transaksi "${deleteTarget.kodeTransaksi}" atas nama ${deleteTarget.pengguna.nama} akan dihapus secara permanen.`
-            : ""
-        }
-        isLoading={isDeleting}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
     </main>
   );
 }

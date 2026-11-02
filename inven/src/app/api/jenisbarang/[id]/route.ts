@@ -33,9 +33,9 @@ export async function GET(request: NextRequest, { params }: Params) {
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== "Admin" && session.role !== "Petugas")) {
+    if (!session || session.role !== "Admin") {
       return NextResponse.json(
-        { error: "Akses ditolak. Wewenang Admin atau Petugas diperlukan." },
+        { error: "Hanya Admin yang berwenang mengubah jenis barang" },
         { status: 403 },
       );
     }
@@ -76,9 +76,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== "Admin" && session.role !== "Petugas")) {
+    if (!session || session.role !== "Admin") {
       return NextResponse.json(
-        { error: "Akses ditolak. Wewenang Admin atau Petugas diperlukan." },
+        { error: "Hanya Admin yang berwenang menghapus jenis barang" },
         { status: 403 },
       );
     }
