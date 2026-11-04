@@ -10,7 +10,6 @@ import {
   Search,
   Pencil,
   Trash2,
-  RotateCcw,
   Check,
   X,
   Loader2,
@@ -507,25 +506,6 @@ export default function KelolaTransaksiPage() {
                               <X size={16} />
                             </Button>
                           </>
-                        )}
-
-                        {/* Jika DIPINJAM atau TERLAMBAT -> tombol Kembalikan */}
-                        {(item.status === "DIPINJAM" || item.status === "TERLAMBAT") && (
-                          <Button
-                            size="sm"
-                            onPress={() =>
-                              handleUpdateStatus(
-                                item.id,
-                                "DIKEMBALIKAN",
-                                "Barang berhasil dikembalikan, stok dipulihkan",
-                              )
-                            }
-                            isDisabled={updatingId === item.id}
-                            className="flex h-8 items-center gap-1.5 rounded-lg bg-cyan-500/15 px-2.5 text-xs font-semibold text-cyan-400 hover:bg-cyan-500/25"
-                          >
-                            <RotateCcw size={14} />
-                            Kembalikan
-                          </Button>
                         )}
 
                         {/* Tombol Edit */}

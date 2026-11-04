@@ -59,6 +59,10 @@ export default function RiwayatTransaksiSayaPage() {
   const [cancelTarget, setCancelTarget] = useState<TransaksiItem | null>(null);
   const [isCanceling, setIsCanceling] = useState(false);
 
+  // State untuk kembalikan barang
+  const [returnTarget, setReturnTarget] = useState<TransaksiItem | null>(null);
+  const [isReturning, setIsReturning] = useState(false);
+
   const fetchTransaksi = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -110,6 +114,40 @@ export default function RiwayatTransaksiSayaPage() {
       toast.error("Terjadi kesalahan", "Tidak dapat terhubung ke server");
     } finally {
       setIsCanceling(false);
+    }
+  };
+
+  const handleReturnBarang = async () => {
+    if (!returnTarget) return;
+
+    setIsReturning(true);
+    try {
+      const res = await fetch(`/api/transaksi/${returnTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "DIKEMBALIKAN" }),
+      });
+      const result = await res.json();
+
+      if (!res.ok) {
+        toast.error("Gagal mengembalikan barang", result.error);
+        setIsReturning(false);
+        return;
+      }
+
+      toast.success("Berhasil", "Barang berhasil dikembalikan ke inventaris");
+      setData((prev) =>
+        prev.map((t) =>
+          t.id === returnTarget.id
+            ? { ...t, status: "DIKEMBALIKAN", tanggalKembali: new Date().toISOString() }
+            : t,
+        ),
+      );
+      setReturnTarget(null);
+    } catch {
+      toast.error("Terjadi kesalahan", "Tidak dapat terhubung ke server");
+    } finally {
+      setIsReturning(false);
     }
   };
 
@@ -375,8 +413,8 @@ export default function RiwayatTransaksiSayaPage() {
                     </td>
 
                     <td className="px-6 py-4 align-middle text-center">
-                      <div className="flex items-center justify-center">
-                        {(item.status === "MENUNGGU" || item.status === "DIPINJAM") ? (
+                      <div className="flex items-center justify-center gap-1.5">
+                        {item.status === "MENUNGGU" && (
                           <Button
                             size="sm"
                             onPress={() => setCancelTarget(item)}
@@ -384,8 +422,29 @@ export default function RiwayatTransaksiSayaPage() {
                           >
                             Batalkan
                           </Button>
-                        ) : (
-                          <span className="text-xs text-zinc-600">-</span>
+                        )}
+
+                        {(item.status === "DIPINJAM" || item.status === "TERLAMBAT") && (
+                          <Button
+                            size="sm"
+                            onPress={() => setReturnTarget(item)}
+                            className="flex h-8 items-center gap-1.5 rounded-lg bg-cyan-500/15 px-3 text-xs font-semibold text-cyan-400 hover:bg-cyan-500/25 cursor-pointer border border-cyan-500/30"
+                          >
+                            <RotateCcw size={13} strokeWidth={2.2} />
+                            Kembalikan
+                          </Button>
+                        )}
+
+                        {item.status === "DIKEMBALIKAN" && (
+                          <span className="text-xs text-emerald-400 font-medium">
+                            Selesai
+                          </span>
+                        )}
+
+                        {(item.status === "DIBATALKAN" || item.status === "DITOLAK") && (
+                          <span className="text-xs text-zinc-500">
+                            {item.status === "DIBATALKAN" ? "Dibatalkan" : "Ditolak"}
+                          </span>
                         )}
                       </div>
                     </td>
@@ -406,6 +465,17 @@ export default function RiwayatTransaksiSayaPage() {
         isLoading={isCanceling}
         onConfirm={handleCancelPeminjaman}
         onCancel={() => setCancelTarget(null)}
+      />
+
+      {/* DIALOG KEMBALIKAN BARANG */}
+      <ConfirmDialog
+        isOpen={Boolean(returnTarget)}
+        title="Kembalikan Barang?"
+        description={`Apakah Anda sudah selesai menggunakan barang "${returnTarget?.barang.nama}" (${returnTarget?.kodeTransaksi}) dan ingin mengembalikannya ke inventaris sekolah?`}
+        confirmLabel="Kembalikan Sekarang"
+        isLoading={isReturning}
+        onConfirm={handleReturnBarang}
+        onCancel={() => setReturnTarget(null)}
       />
     </main>
   );

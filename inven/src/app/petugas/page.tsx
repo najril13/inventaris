@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   X,
   Loader2,
-  RotateCcw,
   Clock,
   Layers,
 } from "lucide-react";
@@ -418,7 +417,7 @@ export default function PetugasDashboardPage() {
                       <th className="px-6 py-4 align-middle text-left">Peminjam</th>
                       <th className="px-6 py-4 align-middle text-left">Barang & SN</th>
                       <th className="px-6 py-4 align-middle text-left">Batas Pengembalian</th>
-                      <th className="px-6 py-4 align-middle text-center">Aksi Pengembalian</th>
+                      <th className="px-6 py-4 align-middle text-center">Status Peminjaman</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/60">
@@ -463,17 +462,10 @@ export default function PetugasDashboardPage() {
                         </td>
                         <td className="px-6 py-4 align-middle text-center">
                           <div className="flex items-center justify-center">
-                            <Button
-                              size="sm"
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-500/15 px-3 py-1.5 text-xs font-semibold text-cyan-400 hover:bg-cyan-500/25"
-                              isDisabled={processingId === loan.id}
-                              onPress={() =>
-                                handleDecision(loan.id, "DIKEMBALIKAN")
-                              }
-                            >
-                              <RotateCcw size={14} />
-                              Kembalikan
-                            </Button>
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-400">
+                              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                              Sedang Dipinjam
+                            </span>
                           </div>
                         </td>
                       </tr>

@@ -364,7 +364,7 @@ export default function PetugasKelolaTransaksiPage() {
                 <th className="px-6 py-4 align-middle text-left">Barang</th>
                 <th className="px-6 py-4 align-middle text-left">Jadwal Pinjam</th>
                 <th className="px-6 py-4 align-middle text-left">Status</th>
-                <th className="px-6 py-4 align-middle text-center">Tindakan Persetujuan</th>
+                <th className="px-6 py-4 align-middle text-center">Tindakan / Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60">
@@ -518,37 +518,27 @@ export default function PetugasKelolaTransaksiPage() {
                           </>
                         )}
 
-                        {/* Jika DIPINJAM atau TERLAMBAT -> Tombol KEMBALIKAN */}
+                        {/* Jika DIPINJAM atau TERLAMBAT -> Histori / Menunggu pengembalian user */}
                         {(item.status === "DIPINJAM" ||
                           item.status === "TERLAMBAT") && (
-                          <Button
-                            size="sm"
-                            onPress={() =>
-                              handleUpdateStatus(
-                                item.id,
-                                "DIKEMBALIKAN",
-                                "Barang berhasil dikembalikan, stok dipulihkan"
-                              )
-                            }
-                            isDisabled={updatingId === item.id}
-                            className="flex h-8 items-center gap-1.5 rounded-lg bg-cyan-500/15 px-3 text-xs font-semibold text-cyan-400 hover:bg-cyan-500/25"
-                          >
-                            <RotateCcw size={14} strokeWidth={2.2} />
-                            Kembalikan
-                          </Button>
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-400">
+                            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                            Dipinjam User
+                          </span>
                         )}
 
                         {/* Jika SUDAH SELESAI */}
                         {item.status === "DIKEMBALIKAN" && (
-                          <span className="text-xs text-zinc-500">
-                            Selesai dikembalikan
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400">
+                            <CheckCircle2 size={13} />
+                            Dikembalikan
                           </span>
                         )}
 
                         {(item.status === "DITOLAK" ||
                           item.status === "DIBATALKAN") && (
                           <span className="text-xs text-zinc-500">
-                            Tidak aktif
+                            {item.status === "DITOLAK" ? "Ditolak" : "Dibatalkan"}
                           </span>
                         )}
                       </div>

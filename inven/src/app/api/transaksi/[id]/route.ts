@@ -99,15 +99,44 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       );
     }
 
-    // User hanya boleh membatalkan jika status masih MENUNGGU atau DIPINJAM
-    if (!isAdmin && isOwner && newStatus && newStatus !== "DIBATALKAN") {
+    const oldStatus = existing.status;
+
+    // Aturan otorisasi:
+    // 1. User biasa (peminjam):
+    //    - Boleh membatalkan ("DIBATALKAN") jika permohonan masih MENUNGGU.
+    //    - Boleh mengembalikan ("DIKEMBALIKAN") jika barang sedang DIPINJAM atau TERLAMBAT.
+    if (!isAdmin && isOwner && newStatus) {
+      if (newStatus === "DIBATALKAN") {
+        if (oldStatus !== "MENUNGGU") {
+          return NextResponse.json(
+            { error: "Hanya permohonan yang masih menunggu persetujuan yang dapat dibatalkan" },
+            { status: 400 },
+          );
+        }
+      } else if (newStatus === "DIKEMBALIKAN") {
+        if (oldStatus !== "DIPINJAM" && oldStatus !== "TERLAMBAT") {
+          return NextResponse.json(
+            { error: "Hanya barang yang sedang dipinjam yang dapat dikembalikan" },
+            { status: 400 },
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: "Pengguna hanya dapat membatalkan permohonan atau mengembalikan barang" },
+          { status: 403 },
+        );
+      }
+    }
+
+    // 2. Petugas / Admin:
+    //    - Pengembalian barang saat dipinjam HANYA boleh dilakukan oleh user yang meminjam.
+    //    - Petugas / Admin hanya menyetujui ("DIPINJAM") atau menolak ("DITOLAK") saat status MENUNGGU.
+    if (isAdmin && !isOwner && newStatus === "DIKEMBALIKAN") {
       return NextResponse.json(
-        { error: "Pengguna hanya dapat membatalkan transaksi" },
+        { error: "Pengembalian barang hanya dapat dilakukan oleh pengguna yang meminjam" },
         { status: 403 },
       );
     }
-
-    const oldStatus = existing.status;
 
     // Transaksi database atomic jika ada perubahan status yang berdampak pada unit & stok
     const updated = await prisma.$transaction(async (tx) => {
