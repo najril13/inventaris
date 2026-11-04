@@ -350,6 +350,7 @@ function FormTransaksiContent() {
                   className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-zinc-200 transition-colors focus:border-cyan-500 focus:outline-none"
                 >
                   <option value="DIPINJAM">Dipinjam (Aktif)</option>
+                  <option value="MENUNGGU_PENGEMBALIAN">Menunggu Persetujuan Pengembalian</option>
                   <option value="DIKEMBALIKAN">Dikembalikan</option>
                   <option value="TERLAMBAT">Terlambat</option>
                   <option value="MENUNGGU">Menunggu Persetujuan</option>

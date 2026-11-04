@@ -133,12 +133,12 @@ export async function POST(request: NextRequest) {
     }
 
     // KUNCI UTAMA: Setiap barang adalah 1 unit fisik.
-    // Jika barang sedang dipinjam atau sedang dalam permohonan pinjaman oleh user lain,
-    // user berikutnya HARUS menunggu sampai barang selesai dipinjam dan dikembalikan.
+    // Jika barang sedang dipinjam, menunggu persetujuan, atau dalam proses pengembalian oleh user lain,
+    // user berikutnya HARUS menunggu sampai barang selesai dipinjam dan resmi dikembalikan.
     const activeTx = await prisma.transaksi.findFirst({
       where: {
         barangId,
-        status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU"] },
+        status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU", "MENUNGGU_PENGEMBALIAN"] },
       },
       include: {
         pengguna: {
@@ -152,6 +152,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error: `Barang ini sedang dalam proses permohonan pinjaman oleh ${activeTx.pengguna.nama}. Anda harus menunggu hingga permohonan selesai diproses atau pilih barang lain.`,
+          },
+          { status: 400 },
+        );
+      }
+      if (activeTx.status === "MENUNGGU_PENGEMBALIAN") {
+        return NextResponse.json(
+          {
+            error: `Barang ini sedang dalam proses persetujuan pengembalian dari ${activeTx.pengguna.nama}. Anda harus menunggu hingga pengembalian disetujui Petugas/Admin terlebih dahulu.`,
           },
           { status: 400 },
         );

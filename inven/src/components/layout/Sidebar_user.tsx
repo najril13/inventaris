@@ -27,7 +27,7 @@ const navigationItems: NavigationItem[] = [
     icon: LayoutDashboard,
   },
   {
-    label: "Barang",
+    label: "Katalog Barang",
     href: "/user/barang",
     icon: Package,
   },

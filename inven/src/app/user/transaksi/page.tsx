@@ -34,7 +34,14 @@ type TransaksiItem = {
   tenggatWaktu: string;
   tanggalKembali: string | null;
   keperluan: string | null;
-  status: "MENUNGGU" | "DIPINJAM" | "TERLAMBAT" | "DIKEMBALIKAN" | "DITOLAK" | "DIBATALKAN";
+  status:
+    | "MENUNGGU"
+    | "DIPINJAM"
+    | "TERLAMBAT"
+    | "DIKEMBALIKAN"
+    | "DITOLAK"
+    | "DIBATALKAN"
+    | "MENUNGGU_PENGEMBALIAN";
 };
 
 function formatDate(isoDate: string): string {
@@ -117,7 +124,7 @@ export default function RiwayatTransaksiSayaPage() {
     }
   };
 
-  const handleReturnBarang = async () => {
+  const handleAjukanPengembalian = async () => {
     if (!returnTarget) return;
 
     setIsReturning(true);
@@ -125,21 +132,24 @@ export default function RiwayatTransaksiSayaPage() {
       const res = await fetch(`/api/transaksi/${returnTarget.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "DIKEMBALIKAN" }),
+        body: JSON.stringify({ status: "MENUNGGU_PENGEMBALIAN" }),
       });
       const result = await res.json();
 
       if (!res.ok) {
-        toast.error("Gagal mengembalikan barang", result.error);
+        toast.error("Gagal mengajukan pengembalian", result.error);
         setIsReturning(false);
         return;
       }
 
-      toast.success("Berhasil", "Barang berhasil dikembalikan ke inventaris");
+      toast.success(
+        "Pengajuan Terkirim",
+        "Pengajuan pengembalian berhasil dikirim ke Petugas / Admin untuk disetujui",
+      );
       setData((prev) =>
         prev.map((t) =>
           t.id === returnTarget.id
-            ? { ...t, status: "DIKEMBALIKAN", tanggalKembali: new Date().toISOString() }
+            ? { ...t, status: "MENUNGGU_PENGEMBALIAN" }
             : t,
         ),
       );
@@ -151,9 +161,34 @@ export default function RiwayatTransaksiSayaPage() {
     }
   };
 
+  const handleBatalAjukanKembali = async (t: TransaksiItem) => {
+    try {
+      const res = await fetch(`/api/transaksi/${t.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "DIPINJAM" }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        toast.error("Gagal membatalkan pengajuan", result.error);
+        return;
+      }
+      toast.success("Berhasil", "Pengajuan pengembalian dibatalkan");
+      setData((prev) =>
+        prev.map((item) =>
+          item.id === t.id ? { ...item, status: "DIPINJAM" } : item,
+        ),
+      );
+    } catch {
+      toast.error("Terjadi kesalahan", "Tidak dapat terhubung ke server");
+    }
+  };
+
   const ringkasan = useMemo(() => {
     const total = data.length;
-    const menunggu = data.filter((t) => t.status === "MENUNGGU").length;
+    const menunggu = data.filter(
+      (t) => t.status === "MENUNGGU" || t.status === "MENUNGGU_PENGEMBALIAN",
+    ).length;
     const dipinjam = data.filter((t) => t.status === "DIPINJAM").length;
     const selesai = data.filter((t) => t.status === "DIKEMBALIKAN").length;
     return { total, menunggu, dipinjam, selesai };
@@ -180,6 +215,13 @@ export default function RiwayatTransaksiSayaPage() {
           <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-900/50 bg-amber-950/30 px-2.5 py-1 text-xs font-medium text-amber-400">
             <Clock size={12} />
             Menunggu Persetujuan
+          </span>
+        );
+      case "MENUNGGU_PENGEMBALIAN":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-900/50 bg-purple-950/30 px-2.5 py-1 text-xs font-medium text-purple-400">
+            <RotateCcw size={12} />
+            Menunggu Approval Kembali
           </span>
         );
       case "DIPINJAM":
@@ -299,7 +341,8 @@ export default function RiwayatTransaksiSayaPage() {
               className="h-11 rounded-xl border border-zinc-700/60 bg-[#101111] px-4 text-xs font-medium text-zinc-300 outline-none cursor-pointer focus:border-cyan-500"
             >
               <option value="ALL">Semua Status</option>
-              <option value="MENUNGGU">Menunggu Persetujuan</option>
+              <option value="MENUNGGU">Menunggu Persetujuan Pinjam</option>
+              <option value="MENUNGGU_PENGEMBALIAN">Menunggu Approval Kembali</option>
               <option value="DIPINJAM">Sedang Dipinjam</option>
               <option value="DIKEMBALIKAN">Selesai / Dikembalikan</option>
               <option value="DIBATALKAN">Dibatalkan</option>
@@ -431,8 +474,26 @@ export default function RiwayatTransaksiSayaPage() {
                             className="flex h-8 items-center gap-1.5 rounded-lg bg-cyan-500/15 px-3 text-xs font-semibold text-cyan-400 hover:bg-cyan-500/25 cursor-pointer border border-cyan-500/30"
                           >
                             <RotateCcw size={13} strokeWidth={2.2} />
-                            Kembalikan
+                            Ajukan Pengembalian
                           </Button>
+                        )}
+
+                        {item.status === "MENUNGGU_PENGEMBALIAN" && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-400">
+                              <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
+                              Menunggu Petugas
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onPress={() => handleBatalAjukanKembali(item)}
+                              className="h-7 px-2 text-[11px] text-zinc-400 hover:text-red-400"
+                              aria-label="Batalkan pengajuan pengembalian barang"
+                            >
+                              Batal
+                            </Button>
+                          </div>
                         )}
 
                         {item.status === "DIKEMBALIKAN" && (
@@ -467,14 +528,16 @@ export default function RiwayatTransaksiSayaPage() {
         onCancel={() => setCancelTarget(null)}
       />
 
-      {/* DIALOG KEMBALIKAN BARANG */}
+      {/* DIALOG AJUKAN PENGEMBALIAN BARANG */}
       <ConfirmDialog
         isOpen={Boolean(returnTarget)}
-        title="Kembalikan Barang?"
-        description={`Apakah Anda sudah selesai menggunakan barang "${returnTarget?.barang.nama}" (${returnTarget?.kodeTransaksi}) dan ingin mengembalikannya ke inventaris sekolah?`}
-        confirmLabel="Kembalikan Sekarang"
+        title="Ajukan Pengembalian Barang?"
+        description={`Apakah Anda ingin mengajukan pengembalian untuk barang "${returnTarget?.barang.nama}" (${returnTarget?.kodeTransaksi})? Petugas atau Admin akan memeriksa fisik barang dan mengonfirmasi persetujuan pengembalian.`}
+        confirmLabel="Ajukan Pengembalian"
+        loadingLabel="Mengajukan..."
+        confirmVariant="warning"
         isLoading={isReturning}
-        onConfirm={handleReturnBarang}
+        onConfirm={handleAjukanPengembalian}
         onCancel={() => setReturnTarget(null)}
       />
     </main>

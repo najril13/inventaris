@@ -95,12 +95,14 @@ export default function AdminPage() {
 
       if (Array.isArray(dataTransaksi.data)) {
         const aktif = dataTransaksi.data.filter(
-          (t: { status: string }) => t.status === "DIPINJAM",
+          (t: { status: string }) =>
+            t.status === "DIPINJAM" || t.status === "TERLAMBAT",
         ).length;
         setAktifPeminjaman(aktif);
 
         const pending = dataTransaksi.data.filter(
-          (t: { status: string }) => t.status === "MENUNGGU",
+          (t: { status: string }) =>
+            t.status === "MENUNGGU" || t.status === "MENUNGGU_PENGEMBALIAN",
         );
         setPendingRequests(pending);
       }
@@ -158,7 +160,13 @@ export default function AdminPage() {
 
     setProcessingId(id);
     try {
-      const targetStatus = decision === "DISETUJUI" ? "DIPINJAM" : "DITOLAK";
+      let targetStatus = "DIPINJAM";
+      if (target.status === "MENUNGGU_PENGEMBALIAN") {
+        targetStatus = decision === "DISETUJUI" ? "DIKEMBALIKAN" : "DIPINJAM";
+      } else {
+        targetStatus = decision === "DISETUJUI" ? "DIPINJAM" : "DITOLAK";
+      }
+
       const res = await fetch(`/api/transaksi/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -172,16 +180,30 @@ export default function AdminPage() {
         return;
       }
 
-      if (decision === "DISETUJUI") {
-        toast.success(
-          "Peminjaman disetujui",
-          `${target.pengguna.nama} dapat mengambil ${target.barang.nama}`,
-        );
+      if (target.status === "MENUNGGU_PENGEMBALIAN") {
+        if (decision === "DISETUJUI") {
+          toast.success(
+            "Pengembalian disetujui",
+            `Barang ${target.barang.nama} telah kembali ke inventaris`,
+          );
+        } else {
+          toast.error(
+            "Pengembalian ditolak",
+            `Pengajuan kembali ${target.pengguna.nama} untuk ${target.barang.nama} ditolak`,
+          );
+        }
       } else {
-        toast.error(
-          "Peminjaman ditolak",
-          `Permintaan ${target.pengguna.nama} untuk ${target.barang.nama} ditolak`,
-        );
+        if (decision === "DISETUJUI") {
+          toast.success(
+            "Peminjaman disetujui",
+            `${target.pengguna.nama} dapat mengambil ${target.barang.nama}`,
+          );
+        } else {
+          toast.error(
+            "Peminjaman ditolak",
+            `Permintaan ${target.pengguna.nama} untuk ${target.barang.nama} ditolak`,
+          );
+        }
       }
 
       setPendingRequests((prev) => prev.filter((r) => r.id !== id));
@@ -310,9 +332,20 @@ export default function AdminPage() {
                         <Package size={20} className="text-cyan-400" />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-zinc-200">
-                          {req.barang.nama}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-medium text-zinc-200">
+                            {req.barang.nama}
+                          </p>
+                          {req.status === "MENUNGGU_PENGEMBALIAN" ? (
+                            <span className="rounded bg-purple-950/60 border border-purple-800/40 px-1.5 py-0.2 text-[10px] font-semibold text-purple-400">
+                              Pengajuan Kembali
+                            </span>
+                          ) : (
+                            <span className="rounded bg-amber-950/60 border border-amber-800/40 px-1.5 py-0.2 text-[10px] font-semibold text-amber-400">
+                              Pinjam Baru
+                            </span>
+                          )}
+                        </div>
                         <p className="mt-0.5 text-xs text-zinc-500">
                           {req.pengguna.nama} &middot; Pinjam:{" "}
                           {formatDate(req.tanggalPinjam)} &middot; Batas:{" "}
@@ -338,7 +371,9 @@ export default function AdminPage() {
                         className="flex h-9 items-center gap-1.5 rounded-lg bg-cyan-500 px-3 text-xs font-semibold text-[#08181a] transition hover:bg-cyan-400 disabled:opacity-60"
                       >
                         <Check size={14} />
-                        Setujui
+                        {req.status === "MENUNGGU_PENGEMBALIAN"
+                          ? "Terima Kembali"
+                          : "Setujui"}
                       </Button>
                     </div>
                   </div>

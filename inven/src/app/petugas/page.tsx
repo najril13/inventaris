@@ -62,11 +62,15 @@ export default function PetugasDashboardPage() {
         const txList: TransaksiRequest[] = dataTransaksi.data;
         setTotalTransaksi(txList.length);
 
-        const aktif = txList.filter((t) => t.status === "DIPINJAM");
+        const aktif = txList.filter(
+          (t) => t.status === "DIPINJAM" || t.status === "TERLAMBAT",
+        );
         setAktifPeminjaman(aktif.length);
         setActiveLoans(aktif.slice(0, 5));
 
-        const pending = txList.filter((t) => t.status === "MENUNGGU");
+        const pending = txList.filter(
+          (t) => t.status === "MENUNGGU" || t.status === "MENUNGGU_PENGEMBALIAN",
+        );
         setMenungguCount(pending.length);
         setPendingRequests(pending);
 
@@ -123,22 +127,33 @@ export default function PetugasDashboardPage() {
   }, [menungguCount, aktifPeminjaman, selesaiCount, totalTransaksi]);
 
   const handleDecision = async (
-    id: string,
-    decision: "DISETUJUI" | "DITOLAK" | "DIKEMBALIKAN"
+    req: TransaksiRequest,
+    decision: "DISETUJUI" | "DITOLAK",
   ) => {
-    setProcessingId(id);
+    setProcessingId(req.id);
     try {
       let targetStatus = "DIPINJAM";
       let msg = "Peminjaman disetujui";
-      if (decision === "DITOLAK") {
-        targetStatus = "DITOLAK";
-        msg = "Peminjaman ditolak";
-      } else if (decision === "DIKEMBALIKAN") {
-        targetStatus = "DIKEMBALIKAN";
-        msg = "Barang berhasil dikembalikan, stok dipulihkan";
+
+      if (req.status === "MENUNGGU_PENGEMBALIAN") {
+        if (decision === "DISETUJUI") {
+          targetStatus = "DIKEMBALIKAN";
+          msg = "Pengembalian barang disetujui, unit kembali tersedia";
+        } else {
+          targetStatus = "DIPINJAM";
+          msg = "Pengajuan pengembalian ditolak, status barang tetap dipinjam";
+        }
+      } else {
+        if (decision === "DISETUJUI") {
+          targetStatus = "DIPINJAM";
+          msg = "Peminjaman disetujui, stok barang dikurangi";
+        } else {
+          targetStatus = "DITOLAK";
+          msg = "Peminjaman ditolak";
+        }
       }
 
-      const res = await fetch(`/api/transaksi/${id}`, {
+      const res = await fetch(`/api/transaksi/${req.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: targetStatus }),
@@ -296,10 +311,21 @@ export default function PetugasDashboardPage() {
                         className="transition-colors hover:bg-white/[0.02]"
                       >
                         <td className="px-6 py-4 align-middle text-left">
-                          <div className="flex flex-col gap-0.5">
-                            <span className="font-mono text-xs font-bold text-cyan-400">
-                              {req.kodeTransaksi}
-                            </span>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs font-bold text-cyan-400">
+                                {req.kodeTransaksi}
+                              </span>
+                              {req.status === "MENUNGGU_PENGEMBALIAN" ? (
+                                <span className="rounded bg-purple-950/60 border border-purple-800/40 px-1.5 py-0.2 text-[10px] font-semibold text-purple-400">
+                                  Pengajuan Kembali
+                                </span>
+                              ) : (
+                                <span className="rounded bg-amber-950/60 border border-amber-800/40 px-1.5 py-0.2 text-[10px] font-semibold text-amber-400">
+                                  Pinjam Baru
+                                </span>
+                              )}
+                            </div>
                             <span className="text-sm font-semibold text-zinc-200">
                               {req.pengguna.nama}
                             </span>
@@ -347,16 +373,18 @@ export default function PetugasDashboardPage() {
                               size="sm"
                               className="flex items-center gap-1.5 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500/25"
                               isDisabled={processingId === req.id}
-                              onPress={() => handleDecision(req.id, "DISETUJUI")}
+                              onPress={() => handleDecision(req, "DISETUJUI")}
                             >
                               <Check size={14} />
-                              Setujui
+                              {req.status === "MENUNGGU_PENGEMBALIAN"
+                                ? "Terima Kembali"
+                                : "Setujui Pinjam"}
                             </Button>
                             <Button
                               size="sm"
                               className="flex items-center gap-1.5 rounded-lg bg-red-500/15 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500/25"
                               isDisabled={processingId === req.id}
-                              onPress={() => handleDecision(req.id, "DITOLAK")}
+                              onPress={() => handleDecision(req, "DITOLAK")}
                             >
                               <X size={14} />
                               Tolak

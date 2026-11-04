@@ -14,7 +14,7 @@ export async function GET() {
         },
         transaksi: {
           where: {
-            status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU"] },
+            status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU", "MENUNGGU_PENGEMBALIAN"] },
           },
           include: {
             pengguna: {
@@ -31,7 +31,9 @@ export async function GET() {
       const activeTx = item.transaksi[0] || null;
       const isDipinjam =
         activeTx &&
-        (activeTx.status === "DIPINJAM" || activeTx.status === "TERLAMBAT");
+        (activeTx.status === "DIPINJAM" ||
+          activeTx.status === "TERLAMBAT" ||
+          activeTx.status === "MENUNGGU_PENGEMBALIAN");
       const isMenunggu = activeTx && activeTx.status === "MENUNGGU";
 
       // Konsep utama: setiap barang adalah 1 unit

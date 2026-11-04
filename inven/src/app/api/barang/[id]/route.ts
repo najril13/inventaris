@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: Params) {
           include: {
             transaksi: {
               where: {
-                status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU"] },
+                status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU", "MENUNGGU_PENGEMBALIAN"] },
               },
               include: {
                 pengguna: {
@@ -134,7 +134,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const activeTx = await prisma.transaksi.findFirst({
       where: {
         barangId: id,
-        status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU"] },
+        status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU", "MENUNGGU_PENGEMBALIAN"] },
       },
     });
 

@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: Params) {
           include: {
             transaksi: {
               where: {
-                status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU"] },
+                status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU", "MENUNGGU_PENGEMBALIAN"] },
               },
               include: {
                 pengguna: {

@@ -103,8 +103,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     // Aturan otorisasi:
     // 1. User biasa (peminjam):
-    //    - Boleh membatalkan ("DIBATALKAN") jika permohonan masih MENUNGGU.
-    //    - Boleh mengembalikan ("DIKEMBALIKAN") jika barang sedang DIPINJAM atau TERLAMBAT.
+    //    - Boleh membatalkan permohonan pinjam ("DIBATALKAN") jika status masih MENUNGGU.
+    //    - Boleh mengajukan pengembalian ("MENUNGGU_PENGEMBALIAN") jika status DIPINJAM atau TERLAMBAT.
+    //    - Boleh membatalkan pengajuan kembali ("DIPINJAM") jika status masih MENUNGGU_PENGEMBALIAN.
+    //    - User TIDAK DAPAT langsung menetapkan status "DIKEMBALIKAN" (harus disetujui Petugas/Admin).
     if (!isAdmin && isOwner && newStatus) {
       if (newStatus === "DIBATALKAN") {
         if (oldStatus !== "MENUNGGU") {
@@ -113,30 +115,38 @@ export async function PATCH(request: NextRequest, { params }: Params) {
             { status: 400 },
           );
         }
-      } else if (newStatus === "DIKEMBALIKAN") {
+      } else if (newStatus === "MENUNGGU_PENGEMBALIAN") {
         if (oldStatus !== "DIPINJAM" && oldStatus !== "TERLAMBAT") {
           return NextResponse.json(
-            { error: "Hanya barang yang sedang dipinjam yang dapat dikembalikan" },
+            { error: "Hanya barang yang sedang dipinjam yang dapat diajukan pengembalian" },
             { status: 400 },
           );
         }
+      } else if (newStatus === "DIPINJAM") {
+        if (oldStatus !== "MENUNGGU_PENGEMBALIAN") {
+          return NextResponse.json(
+            { error: "Tidak dapat mengubah status peminjaman" },
+            { status: 400 },
+          );
+        }
+      } else if (newStatus === "DIKEMBALIKAN") {
+        return NextResponse.json(
+          { error: "Pengembalian barang memerlukan persetujuan dari Petugas atau Admin. Silakan ajukan pengembalian terlebih dahulu." },
+          { status: 403 },
+        );
       } else {
         return NextResponse.json(
-          { error: "Pengguna hanya dapat membatalkan permohonan atau mengembalikan barang" },
+          { error: "Aksi tidak diizinkan untuk pengguna" },
           { status: 403 },
         );
       }
     }
 
     // 2. Petugas / Admin:
-    //    - Pengembalian barang saat dipinjam HANYA boleh dilakukan oleh user yang meminjam.
-    //    - Petugas / Admin hanya menyetujui ("DIPINJAM") atau menolak ("DITOLAK") saat status MENUNGGU.
-    if (isAdmin && !isOwner && newStatus === "DIKEMBALIKAN") {
-      return NextResponse.json(
-        { error: "Pengembalian barang hanya dapat dilakukan oleh pengguna yang meminjam" },
-        { status: 403 },
-      );
-    }
+    //    - Menyetujui ("DIPINJAM") atau Menolak ("DITOLAK") permohonan pinjaman baru (MENUNGGU).
+    //    - Menyetujui pengembalian ("DIKEMBALIKAN") atau Menolak permohonan pengembalian ("DIPINJAM") saat MENUNGGU_PENGEMBALIAN.
+    //    - Boleh mencatat pengembalian langsung ("DIKEMBALIKAN") jika barang sedang dipinjam.
+
 
     // Transaksi database atomic jika ada perubahan status yang berdampak pada unit & stok
     const updated = await prisma.$transaction(async (tx) => {
@@ -156,9 +166,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       if (newStatus && newStatus !== oldStatus) {
         updateData.status = newStatus;
 
-        // 1. Pengembalian barang (DIPINJAM / TERLAMBAT -> DIKEMBALIKAN)
+        // 1. Pengembalian barang disetujui / dicatat selesai
+        // (MENUNGGU_PENGEMBALIAN / DIPINJAM / TERLAMBAT -> DIKEMBALIKAN)
         if (
-          (oldStatus === "DIPINJAM" || oldStatus === "TERLAMBAT") &&
+          (oldStatus === "MENUNGGU_PENGEMBALIAN" ||
+            oldStatus === "DIPINJAM" ||
+            oldStatus === "TERLAMBAT") &&
           newStatus === "DIKEMBALIKAN"
         ) {
           updateData.tanggalKembali = new Date();
@@ -183,14 +196,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
           });
         }
 
-        // 2. Persetujuan peminjaman (MENUNGGU -> DIPINJAM)
+        // 2. Persetujuan peminjaman baru (MENUNGGU -> DIPINJAM)
         if (oldStatus === "MENUNGGU" && newStatus === "DIPINJAM") {
-          // Periksa apakah barang sedang dipinjam oleh user lain
+          // Periksa apakah barang sedang dipinjam atau menunggu pengembalian oleh user lain
           const activeLoan = await tx.transaksi.findFirst({
             where: {
               id: { not: id },
               barangId: existing.barangId,
-              status: { in: ["DIPINJAM", "TERLAMBAT"] },
+              status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU_PENGEMBALIAN"] },
             },
             include: {
               pengguna: {
@@ -245,7 +258,41 @@ export async function PATCH(request: NextRequest, { params }: Params) {
           });
         }
 
-        // 3. Penolakan peminjaman (MENUNGGU -> DITOLAK)
+        // 3. User mengajukan pengembalian (DIPINJAM / TERLAMBAT -> MENUNGGU_PENGEMBALIAN)
+        if (
+          (oldStatus === "DIPINJAM" || oldStatus === "TERLAMBAT") &&
+          newStatus === "MENUNGGU_PENGEMBALIAN"
+        ) {
+          // Status barang & unit fisik tetap DIPINJAM hingga disetujui Petugas/Admin
+          await tx.barang.update({
+            where: { id: existing.barangId },
+            data: {
+              stok: 0,
+              status: "DIPINJAM",
+            },
+          });
+        }
+
+        // 4. Penolakan pengajuan pengembalian / pembatalan pengajuan kembali
+        // (MENUNGGU_PENGEMBALIAN -> DIPINJAM)
+        if (oldStatus === "MENUNGGU_PENGEMBALIAN" && newStatus === "DIPINJAM") {
+          // Barang tetap dipegang user (status barang & unit tetap DIPINJAM)
+          await tx.barang.update({
+            where: { id: existing.barangId },
+            data: {
+              stok: 0,
+              status: "DIPINJAM",
+            },
+          });
+          if (existing.unitId) {
+            await tx.unitBarang.update({
+              where: { id: existing.unitId },
+              data: { status: "DIPINJAM" },
+            });
+          }
+        }
+
+        // 5. Penolakan peminjaman baru (MENUNGGU -> DITOLAK)
         if (oldStatus === "MENUNGGU" && newStatus === "DITOLAK") {
           // Pastikan barang tetap TERSEDIA dengan stok 1
           await tx.barang.update({
@@ -264,7 +311,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
           }
         }
 
-        // 4. Pembatalan saat barang sudah dipinjam (DIPINJAM -> DIBATALKAN)
+        // 6. Pembatalan saat barang sudah dipinjam (DIPINJAM -> DIBATALKAN)
         if (oldStatus === "DIPINJAM" && newStatus === "DIBATALKAN") {
           if (existing.unitId) {
             await tx.unitBarang.update({
@@ -334,8 +381,12 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     }
 
     await prisma.$transaction(async (tx) => {
-      // Jika statusnya masih DIPINJAM, kembalikan unit fisik dan barang ke TERSEDIA
-      if (existing.status === "DIPINJAM" || existing.status === "TERLAMBAT") {
+      // Jika statusnya masih DIPINJAM atau MENUNGGU_PENGEMBALIAN, kembalikan unit fisik dan barang ke TERSEDIA
+      if (
+        existing.status === "DIPINJAM" ||
+        existing.status === "TERLAMBAT" ||
+        existing.status === "MENUNGGU_PENGEMBALIAN"
+      ) {
         if (existing.unitId) {
           await tx.unitBarang.update({
             where: { id: existing.unitId },

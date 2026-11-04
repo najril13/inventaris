@@ -14,6 +14,7 @@ import {
   X,
   Loader2,
   Package,
+  RotateCcw,
 } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { ConfirmDialog } from "@/src/components/kelola_barang/ConfirmDialog";
@@ -48,7 +49,14 @@ type TransaksiItem = {
   tenggatWaktu: string;
   tanggalKembali: string | null;
   keperluan: string | null;
-  status: "MENUNGGU" | "DIPINJAM" | "TERLAMBAT" | "DIKEMBALIKAN" | "DITOLAK" | "DIBATALKAN";
+  status:
+    | "MENUNGGU"
+    | "DIPINJAM"
+    | "TERLAMBAT"
+    | "DIKEMBALIKAN"
+    | "DITOLAK"
+    | "DIBATALKAN"
+    | "MENUNGGU_PENGEMBALIAN";
 };
 
 function getInitials(name: string): string {
@@ -167,10 +175,20 @@ export default function KelolaTransaksiPage() {
   const ringkasan = useMemo(() => {
     const total = data.length;
     const menunggu = data.filter((t) => t.status === "MENUNGGU").length;
+    const pengajuanKembali = data.filter(
+      (t) => t.status === "MENUNGGU_PENGEMBALIAN",
+    ).length;
     const dipinjam = data.filter((t) => t.status === "DIPINJAM").length;
     const terlambat = data.filter((t) => t.status === "TERLAMBAT").length;
     const dikembalikan = data.filter((t) => t.status === "DIKEMBALIKAN").length;
-    return { total, menunggu, dipinjam, terlambat, dikembalikan };
+    return {
+      total,
+      menunggu,
+      pengajuanKembali,
+      dipinjam,
+      terlambat,
+      dikembalikan,
+    };
   }, [data]);
 
   // Filter Data
@@ -196,6 +214,13 @@ export default function KelolaTransaksiPage() {
           <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-900/50 bg-amber-950/30 px-2.5 py-1 text-xs font-medium text-amber-400">
             <Clock size={12} />
             Menunggu
+          </span>
+        );
+      case "MENUNGGU_PENGEMBALIAN":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-900/50 bg-purple-950/30 px-2.5 py-1 text-xs font-medium text-purple-400">
+            <RotateCcw size={12} />
+            Pengajuan Kembali
           </span>
         );
       case "DIPINJAM":
@@ -327,7 +352,8 @@ export default function KelolaTransaksiPage() {
               className="h-11 rounded-xl border border-zinc-700/60 bg-[#101111] px-4 text-xs font-medium text-zinc-300 outline-none cursor-pointer focus:border-cyan-500"
             >
               <option value="ALL">Semua Status</option>
-              <option value="MENUNGGU">Menunggu Persetujuan</option>
+              <option value="MENUNGGU">Menunggu Persetujuan Pinjam</option>
+              <option value="MENUNGGU_PENGEMBALIAN">Pengajuan Kembali</option>
               <option value="DIPINJAM">Dipinjam (Aktif)</option>
               <option value="TERLAMBAT">Terlambat</option>
               <option value="DIKEMBALIKAN">Dikembalikan</option>
@@ -470,7 +496,7 @@ export default function KelolaTransaksiPage() {
                     {/* AKSI */}
                     <td className="px-6 py-4 align-middle text-center">
                       <div className="flex items-center justify-center gap-1.5">
-                        {/* Jika MENUNGGU -> tombol Setujui & Tolak */}
+                        {/* Jika MENUNGGU -> tombol Setujui & Tolak Pinjam */}
                         {item.status === "MENUNGGU" && (
                           <>
                             <Button
@@ -502,6 +528,44 @@ export default function KelolaTransaksiPage() {
                               isDisabled={updatingId === item.id}
                               className="h-8 w-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
                               aria-label="Tolak Peminjaman"
+                            >
+                              <X size={16} />
+                            </Button>
+                          </>
+                        )}
+
+                        {/* Jika MENUNGGU_PENGEMBALIAN -> tombol Terima & Tolak Kembali */}
+                        {item.status === "MENUNGGU_PENGEMBALIAN" && (
+                          <>
+                            <Button
+                              size="sm"
+                              isIconOnly
+                              onPress={() =>
+                                handleUpdateStatus(
+                                  item.id,
+                                  "DIKEMBALIKAN",
+                                  "Pengembalian barang disetujui, unit kembali tersedia",
+                                )
+                              }
+                              isDisabled={updatingId === item.id}
+                              className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                              aria-label="Setujui Pengembalian"
+                            >
+                              <Check size={16} />
+                            </Button>
+                            <Button
+                              size="sm"
+                              isIconOnly
+                              onPress={() =>
+                                handleUpdateStatus(
+                                  item.id,
+                                  "DIPINJAM",
+                                  "Pengajuan pengembalian ditolak, status barang tetap dipinjam",
+                                )
+                              }
+                              isDisabled={updatingId === item.id}
+                              className="h-8 w-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                              aria-label="Tolak Pengembalian"
                             >
                               <X size={16} />
                             </Button>

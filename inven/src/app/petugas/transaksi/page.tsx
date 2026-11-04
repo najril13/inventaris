@@ -12,6 +12,7 @@ import {
   Loader2,
   Inbox,
   ShieldCheck,
+  Box,
 } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { toast } from "@/src/lib/toast";
@@ -45,7 +46,14 @@ type TransaksiItem = {
   tenggatWaktu: string;
   tanggalKembali: string | null;
   keperluan: string | null;
-  status: "MENUNGGU" | "DIPINJAM" | "TERLAMBAT" | "DIKEMBALIKAN" | "DITOLAK" | "DIBATALKAN";
+  status:
+    | "MENUNGGU"
+    | "DIPINJAM"
+    | "TERLAMBAT"
+    | "DIKEMBALIKAN"
+    | "DITOLAK"
+    | "DIBATALKAN"
+    | "MENUNGGU_PENGEMBALIAN";
 };
 
 function getInitials(name: string): string {
@@ -127,26 +135,37 @@ export default function PetugasKelolaTransaksiPage() {
   };
 
   // Ringkasan Statistik
-  const menungguCount = data.filter((t) => t.status === "MENUNGGU").length;
+  const menungguPinjamCount = data.filter((t) => t.status === "MENUNGGU").length;
+  const menungguKembaliCount = data.filter(
+    (t) => t.status === "MENUNGGU_PENGEMBALIAN",
+  ).length;
   const dipinjamCount = data.filter((t) => t.status === "DIPINJAM").length;
   const kembaliCount = data.filter((t) => t.status === "DIKEMBALIKAN").length;
   const ditolakCount = data.filter(
-    (t) => t.status === "DITOLAK" || t.status === "DIBATALKAN"
+    (t) => t.status === "DITOLAK" || t.status === "DIBATALKAN",
   ).length;
 
   const statCards = [
     {
-      label: "Menunggu Persetujuan",
-      value: menungguCount,
+      label: "Permohonan Pinjam",
+      value: menungguPinjamCount,
       icon: Clock,
       tone: "amber" as const,
-      highlight: menungguCount > 0,
+      highlight: menungguPinjamCount > 0,
       filterKey: "MENUNGGU",
+    },
+    {
+      label: "Pengajuan Kembali",
+      value: menungguKembaliCount,
+      icon: RotateCcw,
+      tone: "purple" as const,
+      highlight: menungguKembaliCount > 0,
+      filterKey: "MENUNGGU_PENGEMBALIAN",
     },
     {
       label: "Sedang Dipinjam",
       value: dipinjamCount,
-      icon: RotateCcw,
+      icon: Box,
       tone: "cyan" as const,
       filterKey: "DIPINJAM",
     },
@@ -158,7 +177,7 @@ export default function PetugasKelolaTransaksiPage() {
       filterKey: "DIKEMBALIKAN",
     },
     {
-      label: "Ditolak / Dibatalkan",
+      label: "Ditolak / Batal",
       value: ditolakCount,
       icon: X,
       tone: "neutral" as const,
@@ -168,6 +187,7 @@ export default function PetugasKelolaTransaksiPage() {
 
   const TONE_STYLE = {
     amber: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
+    purple: "bg-purple-500/15 text-purple-400 border border-purple-500/30",
     cyan: "bg-cyan-500/15 text-cyan-400 border border-cyan-500/30",
     emerald: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
     neutral: "bg-zinc-800 text-zinc-300 border border-zinc-700",
@@ -202,6 +222,13 @@ export default function PetugasKelolaTransaksiPage() {
           <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-400">
             <Clock size={13} />
             Menunggu Persetujuan
+          </span>
+        );
+      case "MENUNGGU_PENGEMBALIAN":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-xs font-semibold text-purple-400">
+            <RotateCcw size={13} />
+            Menunggu Approval Kembali
           </span>
         );
       case "DIPINJAM":
@@ -254,18 +281,30 @@ export default function PetugasKelolaTransaksiPage() {
           </p>
         </div>
 
-        {menungguCount > 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-300">
-            <Clock size={16} className="shrink-0" />
-            <span>
-              Ada <strong>{menungguCount}</strong> permohonan pinjaman menunggu persetujuan Anda
-            </span>
+        {(menungguPinjamCount > 0 || menungguKembaliCount > 0) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {menungguPinjamCount > 0 && (
+              <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-300">
+                <Clock size={16} className="shrink-0" />
+                <span>
+                  <strong>{menungguPinjamCount}</strong> permohonan pinjam baru
+                </span>
+              </div>
+            )}
+            {menungguKembaliCount > 0 && (
+              <div className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-2 text-sm text-purple-300">
+                <RotateCcw size={16} className="shrink-0" />
+                <span>
+                  <strong>{menungguKembaliCount}</strong> pengajuan kembali barang
+                </span>
+              </div>
+            )}
           </div>
         )}
       </section>
 
       {/* STAT CARDS */}
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {statCards.map((stat) => {
           const Icon = stat.icon;
           const isSelected = selectedStatus === stat.filterKey;
@@ -311,7 +350,16 @@ export default function PetugasKelolaTransaksiPage() {
         <div className="flex flex-wrap items-center gap-2">
           {[
             { key: "ALL", label: "Semua Transaksi", count: data.length },
-            { key: "MENUNGGU", label: "Menunggu", count: menungguCount },
+            {
+              key: "MENUNGGU",
+              label: "Permohonan Pinjam",
+              count: menungguPinjamCount,
+            },
+            {
+              key: "MENUNGGU_PENGEMBALIAN",
+              label: "Pengajuan Kembali",
+              count: menungguKembaliCount,
+            },
             { key: "DIPINJAM", label: "Dipinjam", count: dipinjamCount },
             { key: "DIKEMBALIKAN", label: "Dikembalikan", count: kembaliCount },
             { key: "DITOLAK", label: "Ditolak / Batal", count: ditolakCount },
@@ -482,7 +530,7 @@ export default function PetugasKelolaTransaksiPage() {
                     {/* AKSI PERSETUJUAN */}
                     <td className="px-6 py-4 align-middle text-center">
                       <div className="flex items-center justify-center gap-2">
-                        {/* Jika MENUNGGU -> Tombol SETUJUI & TOLAK */}
+                        {/* Jika MENUNGGU (Permohonan Pinjam) -> Tombol SETUJUI & TOLAK */}
                         {item.status === "MENUNGGU" && (
                           <>
                             <Button
@@ -507,6 +555,42 @@ export default function PetugasKelolaTransaksiPage() {
                                   item.id,
                                   "DITOLAK",
                                   "Peminjaman ditolak"
+                                )
+                              }
+                              isDisabled={updatingId === item.id}
+                              className="flex h-8 items-center gap-1.5 rounded-lg bg-red-500/15 px-3 text-xs font-bold text-red-400 hover:bg-red-500/25"
+                            >
+                              <X size={14} strokeWidth={2.5} />
+                              Tolak
+                            </Button>
+                          </>
+                        )}
+
+                        {/* Jika MENUNGGU_PENGEMBALIAN -> Tombol TERIMA KEMBALI & TOLAK */}
+                        {item.status === "MENUNGGU_PENGEMBALIAN" && (
+                          <>
+                            <Button
+                              size="sm"
+                              onPress={() =>
+                                handleUpdateStatus(
+                                  item.id,
+                                  "DIKEMBALIKAN",
+                                  "Pengembalian barang disetujui, unit kembali tersedia"
+                                )
+                              }
+                              isDisabled={updatingId === item.id}
+                              className="flex h-8 items-center gap-1.5 rounded-lg bg-emerald-500/15 px-3 text-xs font-bold text-emerald-400 hover:bg-emerald-500/25"
+                            >
+                              <Check size={14} strokeWidth={2.5} />
+                              Terima Kembali
+                            </Button>
+                            <Button
+                              size="sm"
+                              onPress={() =>
+                                handleUpdateStatus(
+                                  item.id,
+                                  "DIPINJAM",
+                                  "Pengajuan pengembalian ditolak, status barang tetap dipinjam"
                                 )
                               }
                               isDisabled={updatingId === item.id}
