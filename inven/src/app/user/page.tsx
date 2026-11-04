@@ -243,10 +243,10 @@ export default function UserPage() {
                                 className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
                                   isAvailable
                                     ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                                    : "border-red-500/30 bg-red-500/10 text-red-400"
+                                    : "border-cyan-500/30 bg-cyan-500/10 text-cyan-400"
                                 }`}
                               >
-                                {isAvailable ? `Tersedia (${item.stok})` : "Habis"}
+                                {isAvailable ? "Tersedia (1 Unit)" : "Sedang Dipinjam"}
                               </span>
                             </div>
                           </td>

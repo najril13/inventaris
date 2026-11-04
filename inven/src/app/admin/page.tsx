@@ -15,7 +15,6 @@ import {
   Users,
   X,
   Loader2,
-  PackageX,
 } from "lucide-react";
 import { toast } from "@/src/lib/toast";
 
@@ -56,7 +55,6 @@ export default function AdminPage() {
   const [totalUser, setTotalUser] = useState(0);
   const [aktifPeminjaman, setAktifPeminjaman] = useState(0);
   const [barangTersedia, setBarangTersedia] = useState(0);
-  const [barangHabis, setBarangHabis] = useState(0);
 
   const [recentBarang, setRecentBarang] = useState<BarangItem[]>([]);
   const [pendingRequests, setPendingRequests] = useState<TransaksiRequest[]>([]);
@@ -81,10 +79,9 @@ export default function AdminPage() {
       if (Array.isArray(dataBarang.data)) {
         setTotalBarang(dataBarang.data.length);
         const tersedia = dataBarang.data.filter(
-          (b: BarangItem) => b.stok > 0 && b.status !== "HABIS",
+          (b: BarangItem) => b.stok > 0 && b.status === "TERSEDIA",
         ).length;
         setBarangTersedia(tersedia);
-        setBarangHabis(dataBarang.data.length - tersedia);
         setRecentBarang(dataBarang.data.slice(0, 5));
       }
 
@@ -243,14 +240,14 @@ export default function AdminPage() {
           })}
         </section>
 
-        {/* STATS KETERSEDIAAN */}
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {/* STATS KETERSEDIAAN UNIT */}
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex items-center gap-4 rounded-2xl border border-zinc-800 bg-[#181919] p-5">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
               <CheckCircle2 size={22} />
             </div>
             <div>
-              <p className="text-sm text-zinc-500">Barang Siap Dipinjam</p>
+              <p className="text-sm text-zinc-500">Unit Siap Dipinjam</p>
               <p className="mt-1 text-xl font-bold text-zinc-100">
                 {isLoading ? "..." : barangTersedia}
               </p>
@@ -258,25 +255,13 @@ export default function AdminPage() {
           </div>
 
           <div className="flex items-center gap-4 rounded-2xl border border-zinc-800 bg-[#181919] p-5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400">
               <Clock3 size={22} />
             </div>
             <div>
-              <p className="text-sm text-zinc-500">Sedang Dipinjam</p>
+              <p className="text-sm text-zinc-500">Unit Sedang Dipinjam</p>
               <p className="mt-1 text-xl font-bold text-zinc-100">
                 {isLoading ? "..." : aktifPeminjaman}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 rounded-2xl border border-zinc-800 bg-[#181919] p-5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
-              <PackageX size={22} />
-            </div>
-            <div>
-              <p className="text-sm text-zinc-500">Stok Habis</p>
-              <p className="mt-1 text-xl font-bold text-zinc-100">
-                {isLoading ? "..." : barangHabis}
               </p>
             </div>
           </div>
@@ -438,14 +423,14 @@ export default function AdminPage() {
                           <div className="flex items-center justify-center">
                             <span
                               className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                                item.stok > 0 && item.status !== "HABIS"
-                                  ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-400"
-                                  : "border-red-500/30 bg-red-500/10 text-red-400"
+                                item.stok > 0 && item.status !== "DIPINJAM"
+                                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                                  : "border-cyan-500/30 bg-cyan-500/10 text-cyan-400"
                               }`}
                             >
-                              {item.stok > 0 && item.status !== "HABIS"
-                                ? `Tersedia (${item.stok})`
-                                : "Habis"}
+                              {item.stok > 0 && item.status !== "DIPINJAM"
+                                ? "Tersedia"
+                                : "Dipinjam"}
                             </span>
                           </div>
                         </td>
