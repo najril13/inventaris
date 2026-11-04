@@ -5,10 +5,12 @@ import {
   Boxes,
   Package,
   PackageCheck,
-  PackageX,
   Search,
   X,
   Loader2,
+  Clock,
+  RotateCcw,
+  ShieldAlert,
 } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { toast } from "@/src/lib/toast";
@@ -36,6 +38,13 @@ interface InventoryItem {
   status: string;
   lokasiRak?: string;
   deskripsi?: string;
+  activeTx?: {
+    id: string;
+    kodeTransaksi: string;
+    status: string;
+    peminjamNama: string;
+    tenggatWaktu: string;
+  } | null;
 }
 
 function todayPlus(days: number) {
@@ -55,7 +64,6 @@ export default function PeminjamanBarangPage() {
 
   // Dialog state
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
-  const [selectedUnitId, setSelectedUnitId] = useState("");
   const [tanggalKembali, setTanggalKembali] = useState(minDate);
   const [catatan, setCatatan] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,7 +83,10 @@ export default function PeminjamanBarangPage() {
         setData(dataBarang.data);
       }
       if (Array.isArray(dataKategori.data)) {
-        setKategoriList(["Semua", ...dataKategori.data.map((k: { nama: string }) => k.nama)]);
+        setKategoriList([
+          "Semua",
+          ...dataKategori.data.map((k: { nama: string }) => k.nama),
+        ]);
       }
     } catch {
       toast.error("Terjadi kesalahan", "Tidak dapat memuat katalog barang");
@@ -91,8 +102,12 @@ export default function PeminjamanBarangPage() {
 
   const totalItems = data.length;
   const totalKategori = kategoriList.length - 1;
-  const tersediaCount = data.filter((item) => item.stok > 0).length;
-  const habisCount = data.filter((item) => item.stok <= 0).length;
+  const tersediaCount = data.filter(
+    (item) => item.status === "TERSEDIA" && item.stok > 0
+  ).length;
+  const dipinjamCount = data.filter(
+    (item) => item.status === "DIPINJAM" || item.stok <= 0
+  ).length;
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
@@ -126,9 +141,9 @@ export default function PeminjamanBarangPage() {
       tone: "emerald" as const,
     },
     {
-      label: "Stok Habis",
-      value: habisCount.toLocaleString("id-ID"),
-      icon: PackageX,
+      label: "Sedang Dipinjam",
+      value: dipinjamCount.toLocaleString("id-ID"),
+      icon: RotateCcw,
       tone: "red" as const,
     },
   ];
@@ -137,12 +152,11 @@ export default function PeminjamanBarangPage() {
     cyan: "bg-cyan-500/15 text-cyan-400",
     neutral: "bg-zinc-700/50 text-zinc-300",
     emerald: "bg-emerald-500/15 text-emerald-400",
-    red: "bg-red-500/15 text-red-400",
+    red: "bg-amber-500/15 text-amber-400",
   };
 
   const openPinjamDialog = (item: InventoryItem) => {
     setSelectedItem(item);
-    setSelectedUnitId("");
     setTanggalKembali(minDate);
     setCatatan("");
   };
@@ -167,7 +181,6 @@ export default function PeminjamanBarangPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           barangId: selectedItem.id,
-          unitId: selectedUnitId || undefined,
           jumlah: 1,
           tenggatWaktu: tanggalKembali,
           keperluan: catatan,
@@ -183,8 +196,8 @@ export default function PeminjamanBarangPage() {
       }
 
       toast.success(
-        "Pengajuan Terkirim",
-        result.message || "Peminjaman berhasil diajukan",
+        "Permohonan Terkirim",
+        result.message || "Peminjaman berhasil diajukan, menunggu persetujuan Petugas atau Admin"
       );
 
       setSelectedItem(null);
@@ -204,7 +217,7 @@ export default function PeminjamanBarangPage() {
           Katalog & Peminjaman Barang
         </h2>
         <p className="mt-1.5 text-sm text-zinc-400">
-          Pilih barang yang tersedia dan ajukan peminjaman untuk kebutuhan kegiatan sekolah.
+          Setiap barang fisik hanya tersedia 1 unit. Ajukan peminjaman dan tunggu persetujuan petugas sebelum barang dapat digunakan.
         </p>
       </section>
 
@@ -215,19 +228,21 @@ export default function PeminjamanBarangPage() {
           return (
             <Card
               key={stat.label}
-              className="rounded-2xl border border-zinc-800 bg-[#181919] p-5 shadow-none"
+              className="rounded-2xl border border-zinc-800 bg-[#181919] p-4 shadow-none"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <div
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${TONE_STYLE[stat.tone]}`}
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                    TONE_STYLE[stat.tone]
+                  }`}
                 >
-                  <Icon size={20} strokeWidth={1.8} />
+                  <Icon size={18} strokeWidth={2.2} />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  <p className="truncate text-xs font-medium text-zinc-400">
                     {stat.label}
                   </p>
-                  <p className="mt-1 text-2xl font-bold tracking-tight text-zinc-100">
+                  <p className="text-xl font-bold tracking-tight text-white">
                     {stat.value}
                   </p>
                 </div>
@@ -237,9 +252,26 @@ export default function PeminjamanBarangPage() {
         })}
       </section>
 
-      {/* SEARCH & FILTER */}
-      <Card className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-[#181919] p-4 shadow-none sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex h-11 items-center gap-3 rounded-xl border border-zinc-700 bg-[#101111] px-4 transition-colors focus-within:border-cyan-500 sm:max-w-md sm:flex-1">
+      {/* FILTER & PENCARIAN */}
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          {kategoriList.map((kat) => (
+            <button
+              key={kat}
+              type="button"
+              onClick={() => setKategoriAktif(kat)}
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                kategoriAktif === kat
+                  ? "bg-cyan-500 text-[#08181a]"
+                  : "border border-zinc-800 bg-[#181919] text-zinc-400 hover:border-zinc-700 hover:text-white"
+              }`}
+            >
+              {kat}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex h-11 items-center gap-3 rounded-xl border border-zinc-700 bg-[#181919] px-4 transition-colors focus-within:border-cyan-500 sm:w-72">
           <Search size={18} className="shrink-0 text-zinc-400" />
           <input
             type="text"
@@ -249,43 +281,19 @@ export default function PeminjamanBarangPage() {
             className="h-full w-full bg-transparent text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
           />
         </div>
+      </section>
 
-        <div className="flex items-center gap-2">
-          <select
-            value={kategoriAktif}
-            onChange={(e) => setKategoriAktif(e.target.value)}
-            className="h-11 rounded-xl border border-zinc-700 bg-[#101111] px-4 text-sm text-zinc-300 outline-none cursor-pointer focus:border-cyan-500"
-          >
-            {kategoriList.map((kat) => (
-              <option key={kat} value={kat} className="bg-[#181919] text-zinc-200">
-                {kat === "Semua" ? "Semua Kategori" : kat}
-              </option>
-            ))}
-          </select>
-        </div>
-      </Card>
-
-      {/* DAFTAR BARANG */}
+      {/* KATALOG TABLE */}
       <Card className="overflow-hidden rounded-2xl border border-zinc-800 bg-[#181919] shadow-none">
         <div className="overflow-x-auto">
           <table className="w-full min-w-180 border-collapse text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 bg-white/1.5">
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Nama Barang
-                </th>
-                <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Kategori
-                </th>
-                <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  SKU / Lokasi
-                </th>
-                <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Ketersediaan
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Aksi
-                </th>
+              <tr className="border-b border-zinc-800 bg-white/1.5 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 text-left">Nama Barang</th>
+                <th className="px-4 py-4 text-left">Kategori</th>
+                <th className="px-4 py-4 text-left">SKU / Lokasi</th>
+                <th className="px-4 py-4 text-left">Status Ketersediaan</th>
+                <th className="px-6 py-4 text-right">Aksi</th>
               </tr>
             </thead>
 
@@ -295,7 +303,9 @@ export default function PeminjamanBarangPage() {
                   <td colSpan={5} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <Loader2 className="animate-spin text-cyan-400" size={28} />
-                      <p className="text-sm text-zinc-400">Memuat katalog barang...</p>
+                      <p className="text-sm text-zinc-400">
+                        Memuat katalog barang...
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -307,7 +317,12 @@ export default function PeminjamanBarangPage() {
                 </tr>
               ) : (
                 filteredData.map((item) => {
-                  const isAvailable = item.stok > 0 && item.status !== "HABIS";
+                  const isAvailable =
+                    item.status === "TERSEDIA" && item.stok > 0;
+                  const isDipinjam =
+                    item.status === "DIPINJAM" || item.stok <= 0;
+                  const isMenunggu = item.status === "MENUNGGU";
+
                   return (
                     <tr
                       key={item.id}
@@ -315,13 +330,17 @@ export default function PeminjamanBarangPage() {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-zinc-400 border border-zinc-700">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800 text-zinc-400">
                             <Package size={20} />
                           </div>
                           <div>
-                            <p className="font-medium text-zinc-200">{item.nama}</p>
+                            <p className="font-medium text-zinc-200">
+                              {item.nama}
+                            </p>
                             {item.merek && (
-                              <p className="text-xs text-zinc-500">{item.merek}</p>
+                              <p className="text-xs text-zinc-500">
+                                {item.merek}
+                              </p>
                             )}
                           </div>
                         </div>
@@ -341,42 +360,69 @@ export default function PeminjamanBarangPage() {
                       </td>
 
                       <td className="px-4 py-4">
-                        {item.totalUnit !== undefined && item.totalUnit > 0 ? (
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-zinc-200">
-                              {item.tersediaCount} / {item.totalUnit} Unit
+                        {isAvailable && (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-900/50 bg-emerald-950/30 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                              Tersedia (1 Unit)
                             </span>
-                            <span className="text-[11px] text-emerald-400">
-                              {isAvailable ? `${item.tersediaCount} Siap Dipinjam` : "Semua Dipinjam"}
+                            <span className="text-[11px] text-zinc-500">
+                              Siap diajukan pinjam
                             </span>
                           </div>
-                        ) : (
-                          <span
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
-                              isAvailable
-                                ? "border-emerald-900/50 bg-emerald-950/30 text-emerald-400"
-                                : "border-red-900/50 bg-red-950/30 text-red-400"
-                            }`}
-                          >
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full ${
-                                isAvailable ? "bg-emerald-400" : "bg-red-400"
-                              }`}
-                            />
-                            {isAvailable ? `Tersedia (${item.stok})` : "Habis"}
-                          </span>
+                        )}
+
+                        {isDipinjam && (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-red-900/50 bg-red-950/30 px-2.5 py-0.5 text-xs font-semibold text-red-400">
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                              Sedang Dipinjam
+                            </span>
+                            <span className="text-[11px] text-zinc-500">
+                              Menunggu dikembalikan
+                            </span>
+                          </div>
+                        )}
+
+                        {isMenunggu && (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-900/50 bg-amber-950/30 px-2.5 py-0.5 text-xs font-semibold text-amber-400">
+                              <Clock size={12} />
+                              Menunggu Persetujuan
+                            </span>
+                            <span className="text-[11px] text-zinc-500">
+                              Sedang dalam permohonan
+                            </span>
+                          </div>
                         )}
                       </td>
 
                       <td className="px-6 py-4 text-right">
-                        <Button
-                          size="sm"
-                          onPress={() => openPinjamDialog(item)}
-                          isDisabled={!isAvailable}
-                          className="h-9 rounded-xl bg-cyan-500 px-4 text-xs font-semibold text-[#08181a] transition hover:bg-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          Pinjam
-                        </Button>
+                        {isAvailable ? (
+                          <Button
+                            size="sm"
+                            onPress={() => openPinjamDialog(item)}
+                            className="h-9 rounded-xl bg-cyan-500 px-4 text-xs font-semibold text-[#08181a] transition hover:bg-cyan-400 cursor-pointer"
+                          >
+                            Pinjam Barang
+                          </Button>
+                        ) : isDipinjam ? (
+                          <Button
+                            size="sm"
+                            isDisabled
+                            className="h-9 rounded-xl bg-zinc-800 px-3.5 text-xs font-medium text-zinc-500 cursor-not-allowed opacity-60"
+                          >
+                            Sedang Dipinjam
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            isDisabled
+                            className="h-9 rounded-xl bg-amber-950/40 border border-amber-800/40 px-3.5 text-xs font-medium text-amber-400 cursor-not-allowed opacity-75"
+                          >
+                            Dalam Antrean
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -389,14 +435,16 @@ export default function PeminjamanBarangPage() {
 
       {/* MODAL PENGAJUAN PINJAM */}
       {selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <Card className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-[#181919] p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
               <div>
                 <h3 className="text-lg font-bold text-white">
-                  Ajukan Peminjaman
+                  Ajukan Peminjaman Barang
                 </h3>
-                <p className="text-xs text-zinc-400">{selectedItem.nama}</p>
+                <p className="text-xs text-zinc-400">
+                  {selectedItem.nama} ({selectedItem.sku})
+                </p>
               </div>
               <button
                 type="button"
@@ -408,33 +456,17 @@ export default function PeminjamanBarangPage() {
             </div>
 
             <div className="mt-5 space-y-4">
-              {/* NOMOR SERI UNIT */}
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Unit Fisik (Nomor Seri)
-                </label>
-                <select
-                  value={selectedUnitId}
-                  onChange={(e) => setSelectedUnitId(e.target.value)}
-                  className="h-11 w-full rounded-xl border border-zinc-700 bg-[#0f1010] px-4 text-sm text-zinc-200 outline-none focus:border-cyan-500 cursor-pointer"
-                >
-                  <option value="">Otomatis (Pilihkan unit yang tersedia)</option>
-                  {(selectedItem.units || [])
-                    .filter((u) => u.status === "TERSEDIA")
-                    .map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.serialNumber} (Kondisi: {u.kondisi})
-                      </option>
-                    ))}
-                </select>
-                <p className="mt-1 text-[11px] text-zinc-500">
-                  Setiap peminjaman adalah 1 unit fisik dengan nomor seri spesifik.
+              {/* NOTICE 1 UNIT & APPROVAL */}
+              <div className="flex items-start gap-3 rounded-xl border border-cyan-800/40 bg-cyan-950/20 p-3.5 text-xs text-cyan-300">
+                <ShieldAlert size={18} className="shrink-0 text-cyan-400 mt-0.5" />
+                <p>
+                  Barang ini merupakan <strong>1 unit fisik</strong> inventaris. Setelah diajukan, permohonan harus <strong>disetujui oleh Petugas atau Admin</strong> terlebih dahulu sebelum barang dapat diambil.
                 </p>
               </div>
 
               <div>
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Batas Waktu Pengembalian
+                  Batas Waktu Pengembalian <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="date"
@@ -453,7 +485,7 @@ export default function PeminjamanBarangPage() {
                   rows={3}
                   value={catatan}
                   onChange={(e) => setCatatan(e.target.value)}
-                  placeholder="Misal: Praktikum Fisika kelas XI IPA 2 di Lab..."
+                  placeholder="Misal: Praktikum di Lab, kegiatan OSIS, atau tugas sekolah..."
                   className="w-full resize-none rounded-xl border border-zinc-700 bg-[#0f1010] px-4 py-2.5 text-sm text-zinc-200 outline-none focus:border-cyan-500"
                 />
               </div>
@@ -472,10 +504,10 @@ export default function PeminjamanBarangPage() {
                 type="button"
                 onPress={submitPeminjaman}
                 isDisabled={isSubmitting}
-                className="flex h-10 items-center gap-2 rounded-xl bg-cyan-500 px-5 text-sm font-semibold text-[#08181a] hover:bg-cyan-400 disabled:opacity-50"
+                className="flex h-10 items-center gap-2 rounded-xl bg-cyan-500 px-5 text-sm font-semibold text-[#08181a] hover:bg-cyan-400 disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-                {isSubmitting ? "Mengirim..." : "Kirim Pengajuan"}
+                {isSubmitting ? "Mengirim..." : "Ajukan Peminjaman"}
               </Button>
             </div>
           </Card>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/prisma";
 import { getSession } from "@/src/lib/auth";
 
-// GET /api/barang - Ambil semua barang beserta unit fisiknya
+// GET /api/barang - Ambil semua barang
 export async function GET() {
   try {
     const rawList = await prisma.barang.findMany({
@@ -12,24 +12,46 @@ export async function GET() {
         units: {
           orderBy: { createdAt: "asc" },
         },
+        transaksi: {
+          where: {
+            status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU"] },
+          },
+          include: {
+            pengguna: {
+              select: { id: true, nama: true, email: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
       },
     });
 
     const barangList = rawList.map((item) => {
-      const totalUnit = item.units.length;
-      const tersediaCount = item.units.filter((u) => u.status === "TERSEDIA").length;
-      const dipinjamCount = item.units.filter((u) => u.status === "DIPINJAM").length;
-      const rusakCount = item.units.filter((u) => u.status === "RUSAK").length;
+      const activeTx = item.transaksi[0] || null;
+      const isDipinjam =
+        activeTx &&
+        (activeTx.status === "DIPINJAM" || activeTx.status === "TERLAMBAT");
+      const isMenunggu = activeTx && activeTx.status === "MENUNGGU";
 
-      const computedStok = totalUnit > 0 ? tersediaCount : item.stok;
-      const computedStatus =
-        totalUnit > 0
-          ? tersediaCount > 0
-            ? "TERSEDIA"
-            : dipinjamCount > 0
-              ? "DIPINJAM"
-              : "HABIS"
-          : item.status;
+      // Konsep utama: setiap barang adalah 1 unit
+      let computedStatus = "TERSEDIA";
+      let computedStok = 1;
+
+      if (isDipinjam || item.status === "DIPINJAM") {
+        computedStatus = "DIPINJAM";
+        computedStok = 0;
+      } else if (isMenunggu) {
+        computedStatus = "MENUNGGU";
+        computedStok = 1;
+      } else if (item.status === "RUSAK") {
+        computedStatus = "RUSAK";
+        computedStok = 0;
+      }
+
+      const totalUnit = item.units.length > 0 ? item.units.length : 1;
+      const tersediaCount = computedStatus === "TERSEDIA" ? 1 : 0;
+      const dipinjamCount = computedStatus === "DIPINJAM" ? 1 : 0;
 
       return {
         ...item,
@@ -38,7 +60,16 @@ export async function GET() {
         totalUnit,
         tersediaCount,
         dipinjamCount,
-        rusakCount,
+        rusakCount: item.status === "RUSAK" ? 1 : 0,
+        activeTx: activeTx
+          ? {
+              id: activeTx.id,
+              kodeTransaksi: activeTx.kodeTransaksi,
+              status: activeTx.status,
+              peminjamNama: activeTx.pengguna.nama,
+              tenggatWaktu: activeTx.tenggatWaktu,
+            }
+          : null,
       };
     });
 
@@ -52,7 +83,7 @@ export async function GET() {
   }
 }
 
-// POST /api/barang - Tambah barang baru beserta unit-unit fisiknya
+// POST /api/barang - Tambah barang baru (1 unit per barang)
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
@@ -109,40 +140,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Kumpulkan daftar Serial Number yang akan didaftarkan
-    const listSN: string[] = [];
-    if (Array.isArray(serialNumbers)) {
-      listSN.push(
-        ...serialNumbers
-          .map((s: string) => String(s).trim())
-          .filter((s: string) => s.length > 0),
-      );
-    } else if (serialNumber && typeof serialNumber === "string" && serialNumber.trim().length > 0) {
-      listSN.push(serialNumber.trim());
+    // Tentukan nomor seri untuk 1 unit barang ini
+    let snInput = "";
+    if (serialNumber && typeof serialNumber === "string" && serialNumber.trim().length > 0) {
+      snInput = serialNumber.trim();
+    } else if (Array.isArray(serialNumbers) && serialNumbers.length > 0) {
+      snInput = String(serialNumbers[0]).trim();
     }
 
-    // Periksa duplikasi nomor seri
-    if (listSN.length > 0) {
-      const uniqueSN = new Set(listSN);
-      if (uniqueSN.size !== listSN.length) {
-        return NextResponse.json(
-          { error: "Terdapat duplikasi nomor seri dalam daftar input Anda" },
-          { status: 400 },
-        );
-      }
+    const finalSN = snInput || `SN-${sku.toUpperCase()}`;
 
-      const duplicateSN = await prisma.unitBarang.findMany({
-        where: { serialNumber: { in: listSN } },
-        select: { serialNumber: true },
-      });
+    // Cek apakah nomor seri sudah pernah dipakai unit lain
+    const duplicateSN = await prisma.unitBarang.findUnique({
+      where: { serialNumber: finalSN },
+    });
 
-      if (duplicateSN.length > 0) {
-        const used = duplicateSN.map((d) => d.serialNumber).join(", ");
-        return NextResponse.json(
-          { error: `Nomor seri berikut sudah digunakan: ${used}` },
-          { status: 409 },
-        );
-      }
+    if (duplicateSN) {
+      return NextResponse.json(
+        { error: `Nomor seri "${finalSN}" sudah digunakan pada barang lain` },
+        { status: 409 },
+      );
     }
 
     const barangTerakhir = await prisma.barang.findFirst({
@@ -154,53 +171,43 @@ export async function POST(request: NextRequest) {
       : 1;
 
     const newId = String(nomorBerikutnya).padStart(4, "0");
-
     const totalUnitStart = await prisma.unitBarang.count();
 
     const created = await prisma.$transaction(async (tx) => {
-      const initialStok = listSN.length;
-      const initialStatus = initialStok > 0 ? "TERSEDIA" : "HABIS";
-
+      // Setiap barang adalah 1 unit fisik:
       const barang = await tx.barang.create({
         data: {
           id: newId,
-          nama,
+          nama: nama.trim(),
           kategoriId,
-          merek: merek || null,
-          sku,
+          merek: merek ? merek.trim() : null,
+          sku: sku.trim(),
           kondisi: kondisi || "BARU",
-          stok: initialStok,
-          lokasiRak: lokasiRak || null,
-          status: initialStatus,
-          deskripsi: deskripsi || null,
+          stok: 1,
+          lokasiRak: lokasiRak ? lokasiRak.trim() : null,
+          status: "TERSEDIA",
+          deskripsi: deskripsi ? deskripsi.trim() : null,
         },
         include: { kategori: true },
       });
 
-      let unitCounter = totalUnitStart + 1;
-      const createdUnits = [];
-
-      for (const sn of listSN) {
-        const kodeUnit = `UNT-${String(unitCounter).padStart(4, "0")}`;
-        const u = await tx.unitBarang.create({
-          data: {
-            kodeUnit,
-            serialNumber: sn,
-            barangId: newId,
-            kondisi: kondisi || "BAIK",
-            status: "TERSEDIA",
-            lokasiRak: lokasiRak || null,
-          },
-        });
-        createdUnits.push(u);
-        unitCounter++;
-      }
+      const kodeUnit = `UNT-${String(totalUnitStart + 1).padStart(4, "0")}`;
+      const unit = await tx.unitBarang.create({
+        data: {
+          kodeUnit,
+          serialNumber: finalSN,
+          barangId: newId,
+          kondisi: kondisi || "BAIK",
+          status: "TERSEDIA",
+          lokasiRak: lokasiRak ? lokasiRak.trim() : null,
+        },
+      });
 
       return {
         ...barang,
-        units: createdUnits,
-        totalUnit: createdUnits.length,
-        tersediaCount: createdUnits.length,
+        units: [unit],
+        totalUnit: 1,
+        tersediaCount: 1,
         dipinjamCount: 0,
         rusakCount: 0,
       };
@@ -208,7 +215,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        message: `Barang berhasil ditambahkan dengan ${created.units.length} unit`,
+        message: `Barang "${created.nama}" berhasil ditambahkan (1 Unit)`,
         data: created,
       },
       { status: 201 },

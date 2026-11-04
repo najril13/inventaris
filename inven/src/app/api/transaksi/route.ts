@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/transaksi - Catat peminjaman baru (oleh Admin atau User)
+// POST /api/transaksi - Catat / ajukan peminjaman baru
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
@@ -85,7 +85,6 @@ export async function POST(request: NextRequest) {
     const {
       barangId,
       unitId,
-      jumlah = 1,
       tanggalPinjam,
       tenggatWaktu,
       keperluan,
@@ -116,9 +115,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const pinjamQty = Number(jumlah) || 1;
-
-    // Periksa ketersediaan barang dan unit
+    // Periksa apakah barang terdaftar
     const barang = await prisma.barang.findUnique({
       where: { id: barangId },
       include: {
@@ -135,42 +132,69 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let targetUnitId: string | null = null;
+    // KUNCI UTAMA: Setiap barang adalah 1 unit fisik.
+    // Jika barang sedang dipinjam atau sedang dalam permohonan pinjaman oleh user lain,
+    // user berikutnya HARUS menunggu sampai barang selesai dipinjam dan dikembalikan.
+    const activeTx = await prisma.transaksi.findFirst({
+      where: {
+        barangId,
+        status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU"] },
+      },
+      include: {
+        pengguna: {
+          select: { id: true, nama: true },
+        },
+      },
+    });
 
-    if (unitId) {
-      const selectedUnit = await prisma.unitBarang.findUnique({
-        where: { id: unitId },
-      });
-      if (!selectedUnit || selectedUnit.barangId !== barangId) {
-        return NextResponse.json(
-          { error: "Unit barang yang dipilih tidak valid" },
-          { status: 400 },
-        );
-      }
-      if (selectedUnit.status !== "TERSEDIA") {
+    if (activeTx) {
+      if (activeTx.status === "MENUNGGU") {
         return NextResponse.json(
           {
-            error: `Unit (${selectedUnit.serialNumber}) sedang tidak tersedia (${selectedUnit.status})`,
+            error: `Barang ini sedang dalam proses permohonan pinjaman oleh ${activeTx.pengguna.nama}. Anda harus menunggu hingga permohonan selesai diproses atau pilih barang lain.`,
           },
           { status: 400 },
         );
       }
-      targetUnitId = selectedUnit.id;
-    } else if (barang.units.length > 0) {
-      // Ambil unit pertama yang tersedia
-      targetUnitId = barang.units[0].id;
-    } else if (barang.stok < pinjamQty) {
       return NextResponse.json(
         {
-          error: "Barang sedang tidak tersedia untuk dipinjam",
+          error: `Barang ini sedang dipinjam oleh ${activeTx.pengguna.nama}. Anda harus menunggu barang selesai dipinjam dan dikembalikan terlebih dahulu.`,
         },
         { status: 400 },
       );
     }
 
+    if (barang.status === "DIPINJAM" || barang.stok <= 0) {
+      return NextResponse.json(
+        {
+          error: "Barang ini sedang dipinjam oleh pengguna lain. Silakan tunggu hingga barang selesai dipinjam dan dikembalikan.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Ambil unit fisik jika ada
+    let targetUnitId: string | null = null;
+    if (unitId) {
+      const selectedUnit = await prisma.unitBarang.findUnique({
+        where: { id: unitId },
+      });
+      if (
+        selectedUnit &&
+        selectedUnit.barangId === barangId &&
+        selectedUnit.status === "TERSEDIA"
+      ) {
+        targetUnitId = selectedUnit.id;
+      }
+    } else if (barang.units.length > 0) {
+      targetUnitId = barang.units[0].id;
+    }
+
     // Tentukan status awal transaksi:
+    // Jika User biasa yang mengajukan -> MENUNGGU (perlu persetujuan Admin atau Petugas)
+    // Jika Admin membuat langsung -> default DIPINJAM
     let statusTransaksi = session.role === "User" ? "MENUNGGU" : "DIPINJAM";
-    if (requestedStatus && (session.role === "Admin" || session.role === "Petugas")) {
+    if (requestedStatus && session.role === "Admin") {
       statusTransaksi = requestedStatus;
     }
 
@@ -182,7 +206,7 @@ export async function POST(request: NextRequest) {
     const dueDate = new Date(tenggatWaktu);
 
     const result = await prisma.$transaction(async (tx) => {
-      // Jika statusnya langsung DIPINJAM:
+      // Jika statusnya langsung DIPINJAM (misal dibuat langsung oleh Admin):
       if (statusTransaksi === "DIPINJAM") {
         if (targetUnitId) {
           await tx.unitBarang.update({
@@ -191,17 +215,11 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        const availableCount = await tx.unitBarang.count({
-          where: { barangId, status: "TERSEDIA" },
-        });
-
-        const sisaStok = barang.units.length > 0 ? availableCount : Math.max(0, barang.stok - pinjamQty);
-
         await tx.barang.update({
           where: { id: barangId },
           data: {
-            stok: sisaStok,
-            status: sisaStok <= 0 ? "HABIS" : barang.status,
+            stok: 0,
+            status: "DIPINJAM",
           },
         });
       }
@@ -235,7 +253,7 @@ export async function POST(request: NextRequest) {
       {
         message:
           statusTransaksi === "MENUNGGU"
-            ? "Pengajuan peminjaman berhasil diajukan, menunggu persetujuan Admin atau Petugas"
+            ? "Permohonan peminjaman berhasil diajukan, menunggu persetujuan Admin atau Petugas"
             : "Peminjaman berhasil dicatat",
         data: result,
       },

@@ -67,7 +67,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     const { id } = await params;
     const body = await request.json();
-    const { status: newStatus, tenggatWaktu, catatan, keperluan, unitId: assignUnitId, kondisiKembali } = body;
+    const {
+      status: newStatus,
+      tenggatWaktu,
+      catatan,
+      keperluan,
+      unitId: assignUnitId,
+      kondisiKembali,
+    } = body;
 
     const existing = await prisma.transaksi.findUnique({
       where: { id },
@@ -137,14 +144,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
             });
           }
 
-          const availableCount = await tx.unitBarang.count({
-            where: { barangId: existing.barangId, status: "TERSEDIA" },
-          });
-
+          // Setiap barang adalah 1 unit fisik: saat dikembalikan, stok = 1, status = TERSEDIA
           await tx.barang.update({
             where: { id: existing.barangId },
             data: {
-              stok: availableCount,
+              stok: 1,
               status: "TERSEDIA",
             },
           });
@@ -152,6 +156,27 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
         // 2. Persetujuan peminjaman (MENUNGGU -> DIPINJAM)
         if (oldStatus === "MENUNGGU" && newStatus === "DIPINJAM") {
+          // Periksa apakah barang sedang dipinjam oleh user lain
+          const activeLoan = await tx.transaksi.findFirst({
+            where: {
+              id: { not: id },
+              barangId: existing.barangId,
+              status: { in: ["DIPINJAM", "TERLAMBAT"] },
+            },
+            include: {
+              pengguna: {
+                select: { nama: true },
+              },
+            },
+          });
+
+          if (activeLoan) {
+            throw new Error(
+              `Barang ini sedang dipinjam oleh ${activeLoan.pengguna.nama}. Anda harus menunggu barang selesai dipinjam dan dikembalikan terlebih dahulu.`
+            );
+          }
+
+          // Cari unit fisik jika ada
           let chosenUnitId = assignUnitId || existing.unitId;
 
           if (chosenUnitId) {
@@ -172,32 +197,45 @@ export async function PATCH(request: NextRequest, { params }: Params) {
             }
           }
 
-          if (!chosenUnitId) {
-            throw new Error(
-              "Stok barang habis atau tidak ada unit fisik yang tersedia untuk disetujui"
-            );
+          // Jika ada unit fisik terdaftar, update statusnya ke DIPINJAM
+          if (chosenUnitId) {
+            updateData.unitId = chosenUnitId;
+            await tx.unitBarang.update({
+              where: { id: chosenUnitId },
+              data: { status: "DIPINJAM" },
+            });
           }
 
-          updateData.unitId = chosenUnitId;
-          await tx.unitBarang.update({
-            where: { id: chosenUnitId },
-            data: { status: "DIPINJAM" },
-          });
-
-          const availableCount = await tx.unitBarang.count({
-            where: { barangId: existing.barangId, status: "TERSEDIA" },
-          });
-
+          // Konsep: setiap barang hanya 1 unit. Ketika dipinjam: stok = 0, status = DIPINJAM
           await tx.barang.update({
             where: { id: existing.barangId },
             data: {
-              stok: availableCount,
-              status: availableCount <= 0 ? "HABIS" : existing.barang.status,
+              stok: 0,
+              status: "DIPINJAM",
             },
           });
         }
 
-        // 3. Pembatalan saat barang sudah dipinjam (DIPINJAM -> DIBATALKAN)
+        // 3. Penolakan peminjaman (MENUNGGU -> DITOLAK)
+        if (oldStatus === "MENUNGGU" && newStatus === "DITOLAK") {
+          // Pastikan barang tetap TERSEDIA dengan stok 1
+          await tx.barang.update({
+            where: { id: existing.barangId },
+            data: {
+              stok: 1,
+              status: "TERSEDIA",
+            },
+          });
+
+          if (existing.unitId) {
+            await tx.unitBarang.update({
+              where: { id: existing.unitId },
+              data: { status: "TERSEDIA" },
+            });
+          }
+        }
+
+        // 4. Pembatalan saat barang sudah dipinjam (DIPINJAM -> DIBATALKAN)
         if (oldStatus === "DIPINJAM" && newStatus === "DIBATALKAN") {
           if (existing.unitId) {
             await tx.unitBarang.update({
@@ -206,14 +244,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
             });
           }
 
-          const availableCount = await tx.unitBarang.count({
-            where: { barangId: existing.barangId, status: "TERSEDIA" },
-          });
-
           await tx.barang.update({
             where: { id: existing.barangId },
             data: {
-              stok: availableCount,
+              stok: 1,
               status: "TERSEDIA",
             },
           });
@@ -246,11 +280,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 }
 
-// DELETE /api/transaksi/[id] - Hapus catatan transaksi
+// DELETE /api/transaksi/[id] - Hapus catatan transaksi (Hanya Admin)
 export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== "Admin" && session.role !== "Petugas")) {
+    if (!session || session.role !== "Admin") {
       return NextResponse.json(
         { error: "Hanya Admin yang berwenang menghapus transaksi" },
         { status: 403 },
@@ -271,7 +305,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     }
 
     await prisma.$transaction(async (tx) => {
-      // Jika statusnya masih DIPINJAM, kembalikan unit fisik ke TERSEDIA sebelum dihapus
+      // Jika statusnya masih DIPINJAM, kembalikan unit fisik dan barang ke TERSEDIA
       if (existing.status === "DIPINJAM" || existing.status === "TERLAMBAT") {
         if (existing.unitId) {
           await tx.unitBarang.update({
@@ -280,14 +314,10 @@ export async function DELETE(request: NextRequest, { params }: Params) {
           });
         }
 
-        const availableCount = await tx.unitBarang.count({
-          where: { barangId: existing.barangId, status: "TERSEDIA" },
-        });
-
         await tx.barang.update({
           where: { id: existing.barangId },
           data: {
-            stok: availableCount,
+            stok: 1,
             status: "TERSEDIA",
           },
         });

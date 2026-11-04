@@ -324,7 +324,7 @@ export default function PetugasDashboardPage() {
                             </span>
                           ) : (
                             <span className="text-xs text-zinc-500">
-                              Otomatis saat disetujui
+                              1 Unit Fisik
                             </span>
                           )}
                         </td>

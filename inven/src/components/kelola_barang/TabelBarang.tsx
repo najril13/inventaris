@@ -10,7 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-export type ItemStatus = "TERSEDIA" | "DIPINJAM" | "HABIS";
+export type ItemStatus = "TERSEDIA" | "DIPINJAM" | "HABIS" | "MENUNGGU" | "RUSAK";
 
 export type KategoriBarang = {
   id: string;
@@ -30,18 +30,26 @@ export type InventoryItem = {
   status: ItemStatus;
 };
 
-const STATUS_STYLE: Record<ItemStatus, { label: string; className: string }> = {
+const STATUS_STYLE: Record<string, { label: string; className: string }> = {
   TERSEDIA: {
     label: "Tersedia",
-    className: "border-cyan-500/30 bg-cyan-500/10 text-cyan-400",
+    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
   },
   DIPINJAM: {
-    label: "Dipinjam",
-    className: "border-zinc-600/60 bg-zinc-700/40 text-zinc-300",
+    label: "Sedang Dipinjam",
+    className: "border-red-500/30 bg-red-500/10 text-red-400",
+  },
+  MENUNGGU: {
+    label: "Menunggu Persetujuan",
+    className: "border-amber-500/30 bg-amber-500/10 text-amber-400",
   },
   HABIS: {
-    label: "Habis",
-    className: "border-red-500/30 bg-red-500/10 text-red-400",
+    label: "Tidak Tersedia",
+    className: "border-zinc-600/60 bg-zinc-700/40 text-zinc-300",
+  },
+  RUSAK: {
+    label: "Rusak",
+    className: "border-amber-500/30 bg-amber-500/10 text-amber-400",
   },
 };
 
@@ -140,7 +148,6 @@ export function BarangTable({
               data.map((item) => {
                 const status = STATUS_STYLE[item.status] || STATUS_STYLE.TERSEDIA;
                 const namaKategori = getKategoriNama(item.kategori);
-                const hasUnits = item.totalUnit !== undefined && item.totalUnit > 0;
 
                 return (
                   <tr
@@ -171,18 +178,9 @@ export function BarangTable({
                     </td>
 
                     <td className="px-4 py-4 align-middle">
-                      {hasUnits ? (
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-zinc-200">
-                            {item.tersediaCount} / {item.totalUnit} Unit
-                          </span>
-                          <span className="text-[11px] text-cyan-400/80">
-                            {item.tersediaCount} Siap Dipinjam
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-zinc-400">{item.stok} Unit</span>
-                      )}
+                      <span className="text-zinc-300 font-medium">
+                        {item.stok > 0 ? "1 Unit" : "0 Unit"}
+                      </span>
                     </td>
 
                     <td className="px-4 py-4 align-middle">
@@ -190,7 +188,9 @@ export function BarangTable({
                         className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${status.className}`}
                       >
                         {item.status === "TERSEDIA"
-                          ? `Tersedia (${item.stok})`
+                          ? "Tersedia"
+                          : item.status === "DIPINJAM"
+                          ? "Dipinjam"
                           : status.label}
                       </span>
                     </td>

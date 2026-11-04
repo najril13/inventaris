@@ -37,20 +37,13 @@ export async function GET(request: NextRequest, { params }: Params) {
       );
     }
 
-    const totalUnit = barang.units.length;
-    const tersediaCount = barang.units.filter((u) => u.status === "TERSEDIA").length;
-    const dipinjamCount = barang.units.filter((u) => u.status === "DIPINJAM").length;
-    const rusakCount = barang.units.filter((u) => u.status === "RUSAK").length;
-
-    const computedStok = totalUnit > 0 ? tersediaCount : barang.stok;
-    const computedStatus =
-      totalUnit > 0
-        ? tersediaCount > 0
-          ? "TERSEDIA"
-          : dipinjamCount > 0
-            ? "DIPINJAM"
-            : "HABIS"
-        : barang.status;
+    const isDipinjam = barang.status === "DIPINJAM";
+    const computedStok = isDipinjam ? 0 : 1;
+    const computedStatus = isDipinjam
+      ? "DIPINJAM"
+      : barang.status === "RUSAK"
+        ? "RUSAK"
+        : "TERSEDIA";
 
     return NextResponse.json(
       {
@@ -58,10 +51,10 @@ export async function GET(request: NextRequest, { params }: Params) {
           ...barang,
           stok: computedStok,
           status: computedStatus,
-          totalUnit,
-          tersediaCount,
-          dipinjamCount,
-          rusakCount,
+          totalUnit: 1,
+          tersediaCount: computedStok,
+          dipinjamCount: isDipinjam ? 1 : 0,
+          rusakCount: barang.status === "RUSAK" ? 1 : 0,
         },
       },
       { status: 200 },
@@ -101,7 +94,6 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       }
     }
 
-    // Hindari menimpa stok dan status secara manual jika ada units
     const { ...safeBody } = body;
 
     const barang = await prisma.barang.update({
@@ -138,18 +130,19 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     const { id } = await params;
 
-    // Periksa apakah ada unit yang sedang dipinjam
-    const unitDipinjam = await prisma.unitBarang.findFirst({
+    // Periksa apakah ada transaksi aktif untuk barang ini
+    const activeTx = await prisma.transaksi.findFirst({
       where: {
         barangId: id,
-        status: { in: ["DIPINJAM", "TERLAMBAT"] },
+        status: { in: ["DIPINJAM", "TERLAMBAT", "MENUNGGU"] },
       },
     });
 
-    if (unitDipinjam) {
+    if (activeTx) {
       return NextResponse.json(
         {
-          error: `Barang tidak dapat dihapus karena unit (${unitDipinjam.serialNumber}) masih dalam status dipinjam`,
+          error:
+            "Barang tidak dapat dihapus karena masih ada transaksi aktif atau permohonan peminjaman",
         },
         { status: 400 },
       );

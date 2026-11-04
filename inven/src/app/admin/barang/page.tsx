@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Button, Card } from "@heroui/react";
 import {
-  AlertTriangle,
   Boxes,
   Package,
   PackageX,
@@ -100,17 +99,21 @@ export default function KelolaBarangPage() {
   const totalKategori = new Set(
     data.map((item) => getKategoriNama(item.kategori)),
   ).size;
-  const lowStockCount = data.filter(
-    (item) => item.stok > 0 && item.stok < 10,
+  const tersediaCount = data.filter(
+    (item) => item.status === "TERSEDIA" && item.stok > 0,
   ).length;
-  const habisCount = data.filter((item) => item.stok === 0).length;
+  const dipinjamCount = data.filter(
+    (item) => item.status === "DIPINJAM" || item.stok === 0,
+  ).length;
 
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const namaKategori = getKategoriNama(item.kategori);
       const matchKategori =
         kategoriAktif === "Semua" || namaKategori === kategoriAktif;
-      const matchQuery = item.nama.toLowerCase().includes(query.toLowerCase());
+      const matchQuery =
+        item.nama.toLowerCase().includes(query.toLowerCase()) ||
+        item.sku.toLowerCase().includes(query.toLowerCase());
       return matchKategori && matchQuery;
     });
   }, [data, kategoriAktif, query]);
@@ -129,16 +132,16 @@ export default function KelolaBarangPage() {
       tone: "neutral" as const,
     },
     {
-      label: "Stok Menipis",
-      value: lowStockCount.toLocaleString("id-ID"),
-      icon: AlertTriangle,
-      tone: "amber" as const,
+      label: "Tersedia Dipinjam",
+      value: tersediaCount.toLocaleString("id-ID"),
+      icon: Package,
+      tone: "emerald" as const,
     },
     {
-      label: "Stok Habis",
-      value: habisCount.toLocaleString("id-ID"),
+      label: "Sedang Dipinjam",
+      value: dipinjamCount.toLocaleString("id-ID"),
       icon: PackageX,
-      tone: "red" as const,
+      tone: "amber" as const,
     },
   ];
 
