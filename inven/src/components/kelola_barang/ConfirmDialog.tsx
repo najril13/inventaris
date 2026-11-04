@@ -8,6 +8,8 @@ type Props = {
   title: string;
   description: string;
   confirmLabel?: string;
+  loadingLabel?: string;
+  confirmVariant?: "danger" | "warning" | "success";
   isLoading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -18,10 +20,26 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "Hapus",
+  loadingLabel,
+  confirmVariant = "danger",
   isLoading = false,
   onConfirm,
   onCancel,
 }: Props) {
+  const iconColors =
+    confirmVariant === "warning"
+      ? "bg-amber-500/10 text-amber-400"
+      : confirmVariant === "success"
+      ? "bg-emerald-500/10 text-emerald-400"
+      : "bg-red-500/10 text-red-400";
+
+  const buttonColors =
+    confirmVariant === "warning"
+      ? "bg-amber-500 hover:bg-amber-400 text-black font-semibold"
+      : confirmVariant === "success"
+      ? "bg-emerald-500 hover:bg-emerald-400 text-white font-semibold"
+      : "bg-red-500 hover:bg-red-400 text-white font-semibold";
+
   return (
     <AlertDialog>
       <AlertDialog.Backdrop
@@ -31,7 +49,7 @@ export function ConfirmDialog({
         <AlertDialog.Container placement="center">
           <AlertDialog.Dialog className="bg-[#181919] border border-zinc-800">
             <AlertDialog.Header>
-              <AlertDialog.Icon className="bg-red-500/10 text-red-400">
+              <AlertDialog.Icon className={iconColors}>
                 <AlertTriangle size={20} />
               </AlertDialog.Icon>
               <AlertDialog.Heading className="text-zinc-100">
@@ -56,9 +74,9 @@ export function ConfirmDialog({
                 type="button"
                 onPress={onConfirm}
                 isDisabled={isLoading}
-                className="h-10 rounded-xl bg-red-500 px-4 text-sm font-semibold text-white hover:bg-red-400 disabled:opacity-50"
+                className={`h-10 rounded-xl px-4 text-sm disabled:opacity-50 ${buttonColors}`}
               >
-                {isLoading ? "Menghapus..." : confirmLabel}
+                {isLoading ? (loadingLabel || "Memproses...") : confirmLabel}
               </Button>
             </AlertDialog.Footer>
           </AlertDialog.Dialog>

@@ -120,7 +120,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         });
         if (activeAdmin <= 1 && existingUser.status === "Active") {
           return NextResponse.json(
-            { error: "Tidak dapat menonaktifkan Admin aktif terakhir" },
+            {
+              error:
+                isSelf
+                  ? "Anda tidak dapat menonaktifkan akun sendiri karena Anda satu-satunya Admin aktif dalam sistem"
+                  : "Tidak dapat menonaktifkan akun Admin jika hanya ada 1 Admin aktif dalam sistem",
+            },
             { status: 400 },
           );
         }
@@ -212,6 +217,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         updatedAt: true,
       },
     });
+
+    // Jika akun dinonaktifkan, hapus sesi login aktif agar langsung ter-logout
+    if (updateData.status === "Inactive") {
+      await prisma.sesi.deleteMany({ where: { penggunaId: id } });
+    }
 
     return NextResponse.json(
       { message: "Data pengguna berhasil diperbarui", data: updated },

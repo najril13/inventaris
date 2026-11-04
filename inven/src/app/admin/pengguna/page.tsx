@@ -51,6 +51,7 @@ function formatDate(isoDate: string): string {
 
 export default function KelolaPenggunaPage() {
   const [penggunaList, setPenggunaList] = useState<Pengguna[]>([]);
+  const [currentUser, setCurrentUser] = useState<{ id: string; role: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
@@ -59,6 +60,23 @@ export default function KelolaPenggunaPage() {
   // State untuk dialog hapus
   const [deleteTarget, setDeleteTarget] = useState<Pengguna | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // State untuk nonaktifkan / aktifkan akun
+  const [statusTarget, setStatusTarget] = useState<Pengguna | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  // Fetch profil pengguna yang sedang login
+  const fetchProfile = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/profile");
+      const result = await res.json();
+      if (res.ok && result.data) {
+        setCurrentUser(result.data);
+      }
+    } catch {
+      // Abaikan jika gagal
+    }
+  }, []);
 
   // Fetch daftar pengguna
   const fetchPengguna = useCallback(async () => {
@@ -80,8 +98,9 @@ export default function KelolaPenggunaPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchProfile();
     fetchPengguna();
-  }, [fetchPengguna]);
+  }, [fetchProfile, fetchPengguna]);
 
   // Handle Hapus
   const handleConfirmDelete = async () => {
@@ -110,6 +129,50 @@ export default function KelolaPenggunaPage() {
     }
   };
 
+  // Handle Nonaktifkan / Aktifkan Akun
+  const handleConfirmToggleStatus = async () => {
+    if (!statusTarget) return;
+
+    const nextStatus: StatusPengguna =
+      statusTarget.status === "Active" ? "Inactive" : "Active";
+    setIsUpdatingStatus(true);
+    try {
+      const res = await fetch(`/api/pengguna/${statusTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const result = await res.json();
+
+      if (!res.ok) {
+        toast.error(
+          "Gagal mengubah status",
+          result.error || "Terjadi kesalahan",
+        );
+        setIsUpdatingStatus(false);
+        return;
+      }
+
+      toast.success(
+        nextStatus === "Inactive" ? "Akun Dinonaktifkan" : "Akun Diaktifkan",
+        `Akun ${statusTarget.nama} berhasil ${
+          nextStatus === "Inactive" ? "dinonaktifkan" : "diaktifkan kembali"
+        }`,
+      );
+
+      setPenggunaList((prev) =>
+        prev.map((u) =>
+          u.id === statusTarget.id ? { ...u, status: nextStatus } : u,
+        ),
+      );
+      setStatusTarget(null);
+    } catch {
+      toast.error("Terjadi kesalahan", "Tidak dapat terhubung ke server");
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   // Filter Data
   const filteredData = useMemo(() => {
     return penggunaList.filter((item) => {
@@ -121,6 +184,13 @@ export default function KelolaPenggunaPage() {
       return matchQuery && matchRole && matchStatus;
     });
   }, [penggunaList, query, roleFilter, statusFilter]);
+
+  // Hitung jumlah Admin yang berstatus aktif dalam sistem
+  const activeAdminCount = useMemo(() => {
+    return penggunaList.filter(
+      (u) => u.role === "Admin" && u.status === "Active"
+    ).length;
+  }, [penggunaList]);
 
   // Statistik Ringkas
   const stats = useMemo(() => {
@@ -313,93 +383,132 @@ export default function KelolaPenggunaPage() {
                   </td>
                 </tr>
               ) : (
-                filteredData.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="transition-colors hover:bg-white/2"
-                  >
-                    {/* USER INFO */}
-                    <td className="px-6 py-4 align-middle text-left">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-sm font-bold text-cyan-400 border border-zinc-700">
-                          {getInitials(item.nama)}
+                filteredData.map((item) => {
+                  const isSingleAdminSelf =
+                    item.role === "Admin" &&
+                    item.id === currentUser?.id &&
+                    activeAdminCount <= 1;
+
+                  return (
+                    <tr
+                      key={item.id}
+                      className="transition-colors hover:bg-white/2"
+                    >
+                      {/* USER INFO */}
+                      <td className="px-6 py-4 align-middle text-left">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-sm font-bold text-cyan-400 border border-zinc-700">
+                            {getInitials(item.nama)}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-semibold text-zinc-200">
+                              {item.nama}
+                            </span>
+                            <span className="text-xs text-zinc-500 truncate max-w-[200px]">
+                              {item.email}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-semibold text-zinc-200">
-                            {item.nama}
-                          </span>
-                          <span className="text-xs text-zinc-500 truncate max-w-[200px]">
-                            {item.email}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* ROLE */}
-                    <td className="px-6 py-4 align-middle text-left">
-                      <span
-                        className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ${
-                          item.role === "Admin"
-                            ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                            : item.role === "Petugas"
-                            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                            : "bg-zinc-800 text-zinc-300 border border-zinc-700"
-                        }`}
-                      >
-                        {item.role}
-                      </span>
-                    </td>
-
-                    {/* TANGGAL BERGABUNG */}
-                    <td className="px-6 py-4 align-middle text-left text-zinc-400 text-xs">
-                      {formatDate(item.tanggalBergabung)}
-                    </td>
-
-                    {/* STATUS */}
-                    <td className="px-6 py-4 align-middle text-left">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
-                          item.status === "Active"
-                            ? "border-emerald-900/50 bg-emerald-950/30 text-emerald-400"
-                            : "border-zinc-700/50 bg-zinc-800/30 text-zinc-400"
-                        }`}
-                      >
+                      {/* ROLE */}
+                      <td className="px-6 py-4 align-middle text-left">
                         <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            item.status === "Active"
-                              ? "bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.5)]"
-                              : "bg-zinc-500"
+                          className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ${
+                            item.role === "Admin"
+                              ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
+                              : item.role === "Petugas"
+                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                              : "bg-zinc-800 text-zinc-300 border border-zinc-700"
                           }`}
-                        />
-                        {item.status}
-                      </span>
-                    </td>
-
-                    {/* AKSI */}
-                    <td className="px-6 py-4 align-middle text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {/* Tombol Edit */}
-                        <Link
-                          href={`/admin/pengguna/hal_pengguna?id=${item.id}`}
-                          aria-label={`Edit ${item.nama}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 text-zinc-400 transition hover:border-cyan-500/50 hover:bg-cyan-500/10 hover:text-cyan-400"
                         >
-                          <Pencil size={15} />
-                        </Link>
+                          {item.role}
+                        </span>
+                      </td>
 
-                        {/* Tombol Hapus */}
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTarget(item)}
-                          aria-label={`Hapus ${item.nama}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 text-zinc-400 transition hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
+                      {/* TANGGAL BERGABUNG */}
+                      <td className="px-6 py-4 align-middle text-left text-zinc-400 text-xs">
+                        {formatDate(item.tanggalBergabung)}
+                      </td>
+
+                      {/* STATUS */}
+                      <td className="px-6 py-4 align-middle text-left">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
+                            item.status === "Active"
+                              ? "border-emerald-900/50 bg-emerald-950/30 text-emerald-400"
+                              : "border-zinc-700/50 bg-zinc-800/30 text-zinc-400"
+                          }`}
                         >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              item.status === "Active"
+                                ? "bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.5)]"
+                                : "bg-zinc-500"
+                            }`}
+                          />
+                          {item.status}
+                        </span>
+                      </td>
+
+                      {/* AKSI */}
+                      <td className="px-6 py-4 align-middle text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {/* Tombol Nonaktifkan / Aktifkan */}
+                          <button
+                            type="button"
+                            disabled={isSingleAdminSelf}
+                            onClick={() => setStatusTarget(item)}
+                            title={
+                              isSingleAdminSelf
+                                ? "Anda satu-satunya Admin aktif, tidak dapat menonaktifkan akun sendiri"
+                                : item.status === "Active"
+                                ? `Nonaktifkan akun ${item.nama}`
+                                : `Aktifkan kembali akun ${item.nama}`
+                            }
+                            aria-label={
+                              item.status === "Active"
+                                ? `Nonaktifkan ${item.nama}`
+                                : `Aktifkan ${item.nama}`
+                            }
+                            className={`flex h-8 w-8 items-center justify-center rounded-lg border transition ${
+                              isSingleAdminSelf
+                                ? "cursor-not-allowed border-zinc-800 bg-zinc-900/40 text-zinc-600 opacity-40"
+                                : item.status === "Active"
+                                ? "border-zinc-700/60 bg-zinc-800/60 text-zinc-400 hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-400"
+                                : "border-zinc-700/60 bg-zinc-800/60 text-zinc-400 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-400"
+                            }`}
+                          >
+                            {item.status === "Active" ? (
+                              <UserX size={15} />
+                            ) : (
+                              <UserCheck size={15} />
+                            )}
+                          </button>
+
+                          {/* Tombol Edit */}
+                          <Link
+                            href={`/admin/pengguna/hal_pengguna?id=${item.id}`}
+                            aria-label={`Edit ${item.nama}`}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 text-zinc-400 transition hover:border-cyan-500/50 hover:bg-cyan-500/10 hover:text-cyan-400"
+                          >
+                            <Pencil size={15} />
+                          </Link>
+
+                          {/* Tombol Hapus */}
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(item)}
+                            aria-label={`Hapus ${item.nama}`}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 text-zinc-400 transition hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -415,6 +524,35 @@ export default function KelolaPenggunaPage() {
         isLoading={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* DIALOG KONFIRMASI NONAKTIFKAN / AKTIFKAN AKUN */}
+      <ConfirmDialog
+        isOpen={Boolean(statusTarget)}
+        title={
+          statusTarget?.status === "Active"
+            ? "Nonaktifkan Akun Pengguna?"
+            : "Aktifkan Kembali Akun Pengguna?"
+        }
+        description={
+          statusTarget?.status === "Active"
+            ? `Apakah Anda yakin ingin menonaktifkan akun "${statusTarget?.nama}" (${statusTarget?.email})? Pengguna ini tidak akan bisa login ke dalam sistem dan sesi yang sedang aktif akan langsung diakhiri.`
+            : `Apakah Anda yakin ingin mengaktifkan kembali akun "${statusTarget?.nama}" (${statusTarget?.email})? Pengguna akan dapat login dan menggunakan sistem kembali.`
+        }
+        confirmLabel={
+          statusTarget?.status === "Active"
+            ? "Nonaktifkan Akun"
+            : "Aktifkan Akun"
+        }
+        loadingLabel={
+          statusTarget?.status === "Active"
+            ? "Menonaktifkan..."
+            : "Mengaktifkan..."
+        }
+        confirmVariant={statusTarget?.status === "Active" ? "warning" : "success"}
+        isLoading={isUpdatingStatus}
+        onConfirm={handleConfirmToggleStatus}
+        onCancel={() => setStatusTarget(null)}
       />
     </main>
   );
