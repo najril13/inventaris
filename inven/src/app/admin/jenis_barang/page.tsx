@@ -118,20 +118,20 @@ export default function KelolaJenisBarangPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-160 border-collapse text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 bg-white/1.5">
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              <tr className="border-b border-zinc-800 bg-white/1.5 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                <th className="px-6 py-4 align-middle text-left">
                   ID Jenis
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-5 py-4 align-middle text-left">
                   Nama Jenis
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-5 py-4 align-middle text-left">
                   Deskripsi
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-5 py-4 align-middle text-center">
                   Jumlah Barang
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-right">
                   Aksi
                 </th>
               </tr>
@@ -142,7 +142,7 @@ export default function KelolaJenisBarangPage() {
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-6 py-14 text-center text-sm text-zinc-500"
+                    className="px-6 py-14 text-center text-sm text-zinc-500 align-middle"
                   >
                     Memuat data...
                   </td>
@@ -153,7 +153,7 @@ export default function KelolaJenisBarangPage() {
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-6 py-14 text-center text-sm text-red-400"
+                    className="px-6 py-14 text-center text-sm text-red-400 align-middle"
                   >
                     {error}
                   </td>
@@ -167,40 +167,42 @@ export default function KelolaJenisBarangPage() {
                     key={item.id}
                     className="border-b border-zinc-800/70 transition-colors last:border-b-0 hover:bg-white/2"
                   >
-                    <td className="px-6 py-4 align-middle font-mono text-xs text-zinc-400">
+                    <td className="px-6 py-4 align-middle text-left font-mono text-xs text-zinc-400">
                       {item.id}
                     </td>
 
-                    <td className="px-4 py-4 align-middle">
+                    <td className="px-5 py-4 align-middle text-left">
                       <p className="font-semibold text-zinc-100">{item.nama}</p>
                     </td>
 
-                    <td className="px-4 py-4 align-middle text-zinc-400">
+                    <td className="px-5 py-4 align-middle text-left text-zinc-400 text-xs">
                       {item.deskripsi || "-"}
                     </td>
 
-                    <td className="px-4 py-4 align-middle font-semibold text-cyan-400">
-                      {item._count.barang.toLocaleString("id-ID")}
+                    <td className="px-5 py-4 align-middle text-center">
+                      <span className="inline-flex items-center rounded-md border border-cyan-800/40 bg-cyan-950/40 px-2.5 py-1 text-xs font-semibold text-cyan-400">
+                        {item._count.barang.toLocaleString("id-ID")} Barang
+                      </span>
                     </td>
 
-                    <td className="px-6 py-4 align-middle">
-                      <div className="flex items-center justify-end gap-1">
+                    <td className="px-6 py-4 align-middle text-right">
+                      <div className="flex items-center justify-end gap-1.5">
                         {/* =============== TOMBOL EDIT (LINK DENGAN QUERY PARAM) =============== */}
                         <Link
                           href={`/admin/jenis_barang/hal_jbarang?id=${item.id}`}
                           aria-label={`Edit ${item.nama}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800 hover:text-cyan-400"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 text-zinc-400 transition hover:border-cyan-500/50 hover:bg-cyan-500/10 hover:text-cyan-400"
                         >
-                          <Pencil size={16} />
+                          <Pencil size={15} />
                         </Link>
 
                         <button
                           type="button"
                           aria-label={`Hapus ${item.nama}`}
                           onClick={() => setDeleteTarget(item)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-500/10 hover:text-red-400"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 text-zinc-400 transition hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </td>

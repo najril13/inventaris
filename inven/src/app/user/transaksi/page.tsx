@@ -274,19 +274,19 @@ export default function RiwayatTransaksiSayaPage() {
           <table className="w-full min-w-180 border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-800/80 bg-[#181919]">
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Kode
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Barang Dipinjam
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Tanggal Pinjam & Batas
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Status
                 </th>
-                <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-center text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Aksi
                 </th>
               </tr>
@@ -295,7 +295,7 @@ export default function RiwayatTransaksiSayaPage() {
             <tbody className="divide-y divide-zinc-800/60">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
+                  <td colSpan={5} className="px-6 py-16 text-center align-middle">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <Loader2 className="animate-spin text-cyan-400" size={28} />
                       <p className="text-sm text-zinc-400">
@@ -308,7 +308,7 @@ export default function RiwayatTransaksiSayaPage() {
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-6 py-12 text-center text-zinc-500"
+                    className="px-6 py-12 text-center text-zinc-500 align-middle"
                   >
                     Belum ada catatan peminjaman.
                   </td>
@@ -319,13 +319,13 @@ export default function RiwayatTransaksiSayaPage() {
                     key={item.id}
                     className="transition-colors hover:bg-white/2"
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 align-middle text-left">
                       <span className="font-mono text-xs font-bold text-cyan-400">
                         {item.kodeTransaksi}
                       </span>
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 align-middle text-left">
                       <div className="flex flex-col gap-1">
                         <span className="font-medium text-zinc-200">
                           {item.barang.nama}
@@ -340,46 +340,54 @@ export default function RiwayatTransaksiSayaPage() {
                             </span>
                           ) : (
                             <span className="text-xs text-zinc-500">
-                              • {item.jumlah} unit
+                              • 1 unit
                             </span>
                           )}
                         </div>
                         {item.keperluan && (
-                          <span className="mt-0.5 text-xs text-zinc-500 italic">
+                          <span className="line-clamp-2 max-w-[220px] text-xs text-zinc-400 italic">
                             &quot;{item.keperluan}&quot;
                           </span>
                         )}
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-xs">
-                      <p className="text-zinc-400">
-                        Pinjam: {formatDate(item.tanggalPinjam)}
-                      </p>
-                      <p className="font-medium text-amber-400/90">
-                        Batas: {formatDate(item.tenggatWaktu)}
-                      </p>
-                      {item.tanggalKembali && (
-                        <p className="text-emerald-400">
-                          Kembali: {formatDate(item.tanggalKembali)}
+                    <td className="px-6 py-4 align-middle text-left text-xs">
+                      <div className="flex flex-col gap-0.5">
+                        <p className="text-zinc-400">
+                          Pinjam: <span className="text-zinc-300 font-medium">{formatDate(item.tanggalPinjam)}</span>
                         </p>
-                      )}
+                        <p className="font-medium text-amber-400/90">
+                          Batas: <span>{formatDate(item.tenggatWaktu)}</span>
+                        </p>
+                        {item.tanggalKembali && (
+                          <p className="text-emerald-400 font-medium">
+                            Kembali: <span>{formatDate(item.tanggalKembali)}</span>
+                          </p>
+                        )}
+                      </div>
                     </td>
 
-                    <td className="px-6 py-4">{renderStatusBadge(item.status)}</td>
+                    <td className="px-6 py-4 align-middle text-left">
+                      <div className="flex items-center">
+                        {renderStatusBadge(item.status)}
+                      </div>
+                    </td>
 
-                    <td className="px-6 py-4 text-center">
-                      {(item.status === "MENUNGGU" || item.status === "DIPINJAM") ? (
-                        <Button
-                          size="sm"
-                          onPress={() => setCancelTarget(item)}
-                          className="h-8 rounded-lg border border-red-500/30 bg-red-500/10 px-3 text-xs font-semibold text-red-400 hover:bg-red-500/20"
-                        >
-                          Batalkan
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-zinc-600">-</span>
-                      )}
+                    <td className="px-6 py-4 align-middle text-center">
+                      <div className="flex items-center justify-center">
+                        {(item.status === "MENUNGGU" || item.status === "DIPINJAM") ? (
+                          <Button
+                            size="sm"
+                            onPress={() => setCancelTarget(item)}
+                            className="h-8 rounded-lg border border-red-500/30 bg-red-500/10 px-3 text-xs font-semibold text-red-400 hover:bg-red-500/20"
+                          >
+                            Batalkan
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-zinc-600">-</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

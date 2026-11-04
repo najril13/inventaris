@@ -288,19 +288,19 @@ export default function PeminjamanBarangPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-180 border-collapse text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 bg-white/1.5 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                <th className="px-6 py-4 text-left">Nama Barang</th>
-                <th className="px-4 py-4 text-left">Kategori</th>
-                <th className="px-4 py-4 text-left">SKU / Lokasi</th>
-                <th className="px-4 py-4 text-left">Status Ketersediaan</th>
-                <th className="px-6 py-4 text-right">Aksi</th>
+              <tr className="border-b border-zinc-800 bg-[#151616] text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                <th className="px-6 py-4 align-middle text-left">Nama Barang</th>
+                <th className="px-5 py-4 align-middle text-left">Kategori</th>
+                <th className="px-5 py-4 align-middle text-left">SKU / Lokasi</th>
+                <th className="px-5 py-4 align-middle text-left">Status Ketersediaan</th>
+                <th className="px-6 py-4 align-middle text-right">Aksi</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-zinc-800/60">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
+                  <td colSpan={5} className="px-6 py-16 text-center align-middle">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <Loader2 className="animate-spin text-cyan-400" size={28} />
                       <p className="text-sm text-zinc-400">
@@ -311,7 +311,7 @@ export default function PeminjamanBarangPage() {
                 </tr>
               ) : filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-zinc-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-zinc-500 align-middle">
                     Tidak ada barang yang cocok dengan kriteria pencarian.
                   </td>
                 </tr>
@@ -328,13 +328,13 @@ export default function PeminjamanBarangPage() {
                       key={item.id}
                       className="transition-colors hover:bg-white/2"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 align-middle text-left">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800 text-zinc-400">
-                            <Package size={20} />
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-700/80 bg-zinc-800/80 text-zinc-400">
+                            <Package size={20} className="text-cyan-400" />
                           </div>
-                          <div>
-                            <p className="font-medium text-zinc-200">
+                          <div className="flex flex-col gap-0.5">
+                            <p className="font-semibold text-zinc-100">
                               {item.nama}
                             </p>
                             {item.merek && (
@@ -346,20 +346,22 @@ export default function PeminjamanBarangPage() {
                         </div>
                       </td>
 
-                      <td className="px-4 py-4">
-                        <span className="inline-flex rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-300">
+                      <td className="px-5 py-4 align-middle text-left">
+                        <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-800/60 px-2.5 py-1 text-xs font-medium text-zinc-300">
                           {item.kategori?.nama || "Umum"}
                         </span>
                       </td>
 
-                      <td className="px-4 py-4 text-zinc-400">
-                        <p className="font-mono text-xs">{item.sku}</p>
-                        <p className="text-xs text-zinc-500">
-                          {item.lokasiRak || "Gudang Utama"}
-                        </p>
+                      <td className="px-5 py-4 align-middle text-left text-zinc-400">
+                        <div className="flex flex-col gap-0.5">
+                          <p className="font-mono text-xs text-zinc-300">{item.sku}</p>
+                          <p className="text-xs text-zinc-500">
+                            {item.lokasiRak || "Gudang Utama"}
+                          </p>
+                        </div>
                       </td>
 
-                      <td className="px-4 py-4">
+                      <td className="px-5 py-4 align-middle text-left">
                         {isAvailable && (
                           <div className="flex flex-col gap-0.5">
                             <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-900/50 bg-emerald-950/30 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
@@ -397,32 +399,34 @@ export default function PeminjamanBarangPage() {
                         )}
                       </td>
 
-                      <td className="px-6 py-4 text-right">
-                        {isAvailable ? (
-                          <Button
-                            size="sm"
-                            onPress={() => openPinjamDialog(item)}
-                            className="h-9 rounded-xl bg-cyan-500 px-4 text-xs font-semibold text-[#08181a] transition hover:bg-cyan-400 cursor-pointer"
-                          >
-                            Pinjam Barang
-                          </Button>
-                        ) : isDipinjam ? (
-                          <Button
-                            size="sm"
-                            isDisabled
-                            className="h-9 rounded-xl bg-zinc-800 px-3.5 text-xs font-medium text-zinc-500 cursor-not-allowed opacity-60"
-                          >
-                            Sedang Dipinjam
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            isDisabled
-                            className="h-9 rounded-xl bg-amber-950/40 border border-amber-800/40 px-3.5 text-xs font-medium text-amber-400 cursor-not-allowed opacity-75"
-                          >
-                            Dalam Antrean
-                          </Button>
-                        )}
+                      <td className="px-6 py-4 align-middle text-right">
+                        <div className="flex items-center justify-end">
+                          {isAvailable ? (
+                            <Button
+                              size="sm"
+                              onPress={() => openPinjamDialog(item)}
+                              className="h-9 rounded-xl bg-cyan-500 px-4 text-xs font-semibold text-[#08181a] transition hover:bg-cyan-400 cursor-pointer shadow-sm"
+                            >
+                              Pinjam Barang
+                            </Button>
+                          ) : isDipinjam ? (
+                            <Button
+                              size="sm"
+                              isDisabled
+                              className="h-9 rounded-xl bg-zinc-800 px-3.5 text-xs font-medium text-zinc-500 cursor-not-allowed opacity-60"
+                            >
+                              Sedang Dipinjam
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              isDisabled
+                              className="h-9 rounded-xl bg-amber-950/40 border border-amber-800/40 px-3.5 text-xs font-medium text-amber-400 cursor-not-allowed opacity-75"
+                            >
+                              Dalam Antrean
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

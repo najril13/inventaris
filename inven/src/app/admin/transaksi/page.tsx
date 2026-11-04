@@ -342,22 +342,22 @@ export default function KelolaTransaksiPage() {
           <table className="w-full min-w-220 border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-800/80 bg-[#181919]">
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Kode Transaksi
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Peminjam
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Barang (Jumlah)
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  Barang & SN
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Tgl Pinjam & Batas
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Status
                 </th>
-                <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-center text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Aksi
                 </th>
               </tr>
@@ -366,7 +366,7 @@ export default function KelolaTransaksiPage() {
             <tbody className="divide-y divide-zinc-800/60">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center">
+                  <td colSpan={6} className="px-6 py-16 text-center align-middle">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <Loader2 className="animate-spin text-cyan-400" size={28} />
                       <p className="text-sm text-zinc-400">
@@ -379,7 +379,7 @@ export default function KelolaTransaksiPage() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-6 py-12 text-center text-zinc-500"
+                    className="px-6 py-12 text-center text-zinc-500 align-middle"
                   >
                     Tidak ada transaksi yang cocok.
                   </td>
@@ -391,28 +391,30 @@ export default function KelolaTransaksiPage() {
                     className="transition-colors hover:bg-white/2"
                   >
                     {/* KODE */}
-                    <td className="px-6 py-4">
-                      <span className="font-mono text-xs font-bold text-cyan-400">
-                        {item.kodeTransaksi}
-                      </span>
-                      {item.keperluan && (
-                        <p className="mt-1 line-clamp-1 text-xs text-zinc-500">
-                          {item.keperluan}
-                        </p>
-                      )}
+                    <td className="px-6 py-4 align-middle text-left">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-mono text-xs font-bold text-cyan-400">
+                          {item.kodeTransaksi}
+                        </span>
+                        {item.keperluan && (
+                          <p className="line-clamp-2 max-w-[200px] text-xs text-zinc-400 italic">
+                            &quot;{item.keperluan}&quot;
+                          </p>
+                        )}
+                      </div>
                     </td>
 
                     {/* PEMINJAM */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs font-bold text-zinc-300 border border-zinc-700">
+                    <td className="px-6 py-4 align-middle text-left">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs font-bold text-cyan-400 border border-zinc-700">
                           {getInitials(item.pengguna.nama)}
                         </div>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-zinc-200">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-zinc-200">
                             {item.pengguna.nama}
                           </span>
-                          <span className="text-[11px] text-zinc-500">
+                          <span className="text-xs text-zinc-500 truncate max-w-[180px]">
                             {item.pengguna.email}
                           </span>
                         </div>
@@ -420,7 +422,7 @@ export default function KelolaTransaksiPage() {
                     </td>
 
                     {/* BARANG */}
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 align-middle text-left">
                       <div className="flex flex-col gap-1">
                         <span className="font-medium text-zinc-200">
                           {item.barang.nama}
@@ -435,7 +437,7 @@ export default function KelolaTransaksiPage() {
                             </span>
                           ) : (
                             <span className="text-xs text-zinc-500">
-                              • {item.jumlah} unit
+                              • 1 unit
                             </span>
                           )}
                         </div>
@@ -443,22 +445,31 @@ export default function KelolaTransaksiPage() {
                     </td>
 
                     {/* TANGGAL */}
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col text-xs">
+                    <td className="px-6 py-4 align-middle text-left">
+                      <div className="flex flex-col gap-0.5 text-xs">
                         <span className="text-zinc-400">
-                          Pinjam: {formatDate(item.tanggalPinjam)}
+                          Pinjam: <span className="text-zinc-300 font-medium">{formatDate(item.tanggalPinjam)}</span>
                         </span>
-                        <span className="font-medium text-amber-400/90">
-                          Batas: {formatDate(item.tenggatWaktu)}
+                        <span className="text-amber-400/90 font-medium">
+                          Batas: <span>{formatDate(item.tenggatWaktu)}</span>
                         </span>
+                        {item.tanggalKembali && (
+                          <span className="text-emerald-400 font-medium">
+                            Kembali: <span>{formatDate(item.tanggalKembali)}</span>
+                          </span>
+                        )}
                       </div>
                     </td>
 
                     {/* STATUS */}
-                    <td className="px-6 py-4">{renderStatusBadge(item.status)}</td>
+                    <td className="px-6 py-4 align-middle text-left">
+                      <div className="flex items-center">
+                        {renderStatusBadge(item.status)}
+                      </div>
+                    </td>
 
                     {/* AKSI */}
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 align-middle text-center">
                       <div className="flex items-center justify-center gap-1.5">
                         {/* Jika MENUNGGU -> tombol Setujui & Tolak */}
                         {item.status === "MENUNGGU" && (
@@ -521,7 +532,7 @@ export default function KelolaTransaksiPage() {
                         <Link
                           href={`/admin/transaksi/hal_catatbarang?id=${item.id}`}
                           aria-label="Edit Transaksi"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800 hover:text-cyan-400"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 text-zinc-400 transition hover:border-cyan-500/50 hover:bg-cyan-500/10 hover:text-cyan-400"
                         >
                           <Pencil size={15} />
                         </Link>
@@ -531,7 +542,7 @@ export default function KelolaTransaksiPage() {
                           type="button"
                           onClick={() => setDeleteTarget(item)}
                           aria-label="Hapus Transaksi"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-500/10 hover:text-red-400"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 text-zinc-400 transition hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
                         >
                           <Trash2 size={15} />
                         </button>

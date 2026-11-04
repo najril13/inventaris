@@ -189,17 +189,17 @@ export default function UserPage() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-160 border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  <tr className="border-b border-zinc-800 bg-[#151616] text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                    <th className="px-6 py-4 align-middle text-left">
                       Nama Barang
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    <th className="px-5 py-4 align-middle text-left">
                       Kategori
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    <th className="px-5 py-4 align-middle text-center">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    <th className="px-6 py-4 align-middle text-right">
                       Aksi
                     </th>
                   </tr>
@@ -208,7 +208,7 @@ export default function UserPage() {
                 <tbody>
                   {recentBarang.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-8 text-center text-zinc-500">
+                      <td colSpan={4} className="px-6 py-8 text-center text-zinc-500 align-middle">
                         Belum ada barang di inventaris.
                       </td>
                     </tr>
@@ -220,37 +220,41 @@ export default function UserPage() {
                           key={item.id}
                           className="border-b border-zinc-800/70 transition-colors last:border-b-0 hover:bg-white/2"
                         >
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 align-middle text-left">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-800/80">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-700/80 bg-zinc-800/80">
                                 <Package size={18} className="text-cyan-400" />
                               </div>
-                              <span className="font-medium text-zinc-200">
+                              <span className="font-semibold text-zinc-100">
                                 {item.nama}
                               </span>
                             </div>
                           </td>
 
-                          <td className="px-4 py-4 align-middle text-zinc-400">
-                            {item.kategori?.nama || "Umum"}
-                          </td>
-
-                          <td className="px-4 py-4 align-middle">
-                            <span
-                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                                isAvailable
-                                  ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-400"
-                                  : "border-red-500/30 bg-red-500/10 text-red-400"
-                              }`}
-                            >
-                              {isAvailable ? `Tersedia (${item.stok})` : "Habis"}
+                          <td className="px-5 py-4 align-middle text-left">
+                            <span className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-800/60 px-2.5 py-1 text-xs font-medium text-zinc-300">
+                              {item.kategori?.nama || "Umum"}
                             </span>
                           </td>
 
-                          <td className="px-6 py-4 text-right">
+                          <td className="px-5 py-4 align-middle text-center">
+                            <div className="flex items-center justify-center">
+                              <span
+                                className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                  isAvailable
+                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                                    : "border-red-500/30 bg-red-500/10 text-red-400"
+                                }`}
+                              >
+                                {isAvailable ? `Tersedia (${item.stok})` : "Habis"}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="px-6 py-4 align-middle text-right">
                             <Link
                               href="/user/barang"
-                              className="text-xs font-semibold text-cyan-400 hover:underline"
+                              className="text-xs font-semibold text-cyan-400 transition hover:text-cyan-300 hover:underline"
                             >
                               Pinjam Sekarang &rarr;
                             </Link>

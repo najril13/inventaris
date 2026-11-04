@@ -359,18 +359,18 @@ export default function PetugasKelolaTransaksiPage() {
           <table className="w-full min-w-180 border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-800 bg-[#121313] text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                <th className="px-6 py-4">Kode / Waktu</th>
-                <th className="px-6 py-4">Peminjam</th>
-                <th className="px-6 py-4">Barang & Nomor Seri</th>
-                <th className="px-6 py-4">Jadwal Pinjam</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-center">Tindakan Persetujuan</th>
+                <th className="px-6 py-4 align-middle text-left">Kode / Keperluan</th>
+                <th className="px-6 py-4 align-middle text-left">Peminjam</th>
+                <th className="px-6 py-4 align-middle text-left">Barang</th>
+                <th className="px-6 py-4 align-middle text-left">Jadwal Pinjam</th>
+                <th className="px-6 py-4 align-middle text-left">Status</th>
+                <th className="px-6 py-4 align-middle text-center">Tindakan Persetujuan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center">
+                  <td colSpan={6} className="px-6 py-16 text-center align-middle">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <Loader2 className="animate-spin text-cyan-400" size={28} />
                       <p className="text-sm text-zinc-400">
@@ -381,7 +381,7 @@ export default function PetugasKelolaTransaksiPage() {
                 </tr>
               ) : filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center text-zinc-500">
+                  <td colSpan={6} className="px-6 py-16 text-center text-zinc-500 align-middle">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Inbox size={32} className="text-zinc-600" />
                       <p className="text-sm font-medium text-zinc-400">
@@ -402,28 +402,30 @@ export default function PetugasKelolaTransaksiPage() {
                     className="transition-colors hover:bg-white/[0.02]"
                   >
                     {/* KODE */}
-                    <td className="px-6 py-4">
-                      <span className="font-mono text-xs font-bold text-cyan-400">
-                        {item.kodeTransaksi}
-                      </span>
-                      {item.keperluan && (
-                        <p className="mt-1 line-clamp-1 text-xs text-zinc-400 italic">
-                          &quot;{item.keperluan}&quot;
-                        </p>
-                      )}
+                    <td className="px-6 py-4 align-middle text-left">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-mono text-xs font-bold text-cyan-400">
+                          {item.kodeTransaksi}
+                        </span>
+                        {item.keperluan && (
+                          <p className="line-clamp-2 max-w-[200px] text-xs text-zinc-400 italic">
+                            &quot;{item.keperluan}&quot;
+                          </p>
+                        )}
+                      </div>
                     </td>
 
                     {/* PEMINJAM */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800 text-xs font-bold text-zinc-300">
+                    <td className="px-6 py-4 align-middle text-left">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800 text-xs font-bold text-cyan-400">
                           {getInitials(item.pengguna.nama)}
                         </div>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-zinc-200">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-zinc-200">
                             {item.pengguna.nama}
                           </span>
-                          <span className="text-[11px] text-zinc-500">
+                          <span className="text-xs text-zinc-500 truncate max-w-[180px]">
                             {item.pengguna.email}
                           </span>
                         </div>
@@ -431,7 +433,7 @@ export default function PetugasKelolaTransaksiPage() {
                     </td>
 
                     {/* BARANG */}
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 align-middle text-left">
                       <div className="flex flex-col gap-1">
                         <span className="font-medium text-zinc-200">
                           {item.barang.nama}
@@ -454,29 +456,31 @@ export default function PetugasKelolaTransaksiPage() {
                     </td>
 
                     {/* TANGGAL */}
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col text-xs">
+                    <td className="px-6 py-4 align-middle text-left">
+                      <div className="flex flex-col gap-0.5 text-xs">
                         <span className="text-zinc-400">
-                          Pinjam: {formatDate(item.tanggalPinjam)}
+                          Pinjam: <span className="text-zinc-300 font-medium">{formatDate(item.tanggalPinjam)}</span>
                         </span>
-                        <span className="font-semibold text-amber-400/90">
-                          Batas: {formatDate(item.tenggatWaktu)}
+                        <span className="text-amber-400/90 font-medium">
+                          Batas: <span>{formatDate(item.tenggatWaktu)}</span>
                         </span>
                         {item.tanggalKembali && (
-                          <span className="text-[11px] text-emerald-400">
-                            Kembali: {formatDate(item.tanggalKembali)}
+                          <span className="text-emerald-400 font-medium">
+                            Kembali: <span>{formatDate(item.tanggalKembali)}</span>
                           </span>
                         )}
                       </div>
                     </td>
 
                     {/* STATUS */}
-                    <td className="px-6 py-4">
-                      {renderStatusBadge(item.status)}
+                    <td className="px-6 py-4 align-middle text-left">
+                      <div className="flex items-center">
+                        {renderStatusBadge(item.status)}
+                      </div>
                     </td>
 
                     {/* AKSI PERSETUJUAN */}
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 align-middle text-center">
                       <div className="flex items-center justify-center gap-2">
                         {/* Jika MENUNGGU -> Tombol SETUJUI & TOLAK */}
                         {item.status === "MENUNGGU" && (

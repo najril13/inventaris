@@ -273,19 +273,19 @@ export default function KelolaPenggunaPage() {
           <table className="w-full min-w-200 border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-800/80 bg-[#181919]">
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Nama Pengguna
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Role
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Tanggal Bergabung
                 </th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-left text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Status
                 </th>
-                <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <th className="px-6 py-4 align-middle text-center text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Aksi
                 </th>
               </tr>
@@ -294,7 +294,7 @@ export default function KelolaPenggunaPage() {
             <tbody className="divide-y divide-zinc-800/60">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
+                  <td colSpan={5} className="px-6 py-16 text-center align-middle">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <Loader2 className="animate-spin text-cyan-400" size={28} />
                       <p className="text-sm text-zinc-400">
@@ -307,7 +307,7 @@ export default function KelolaPenggunaPage() {
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-6 py-12 text-center text-zinc-500"
+                    className="px-6 py-12 text-center text-zinc-500 align-middle"
                   >
                     Tidak ada pengguna yang sesuai dengan pencarian atau filter.
                   </td>
@@ -319,16 +319,16 @@ export default function KelolaPenggunaPage() {
                     className="transition-colors hover:bg-white/2"
                   >
                     {/* USER INFO */}
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 align-middle text-left">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-sm font-bold text-cyan-400 border border-zinc-700">
                           {getInitials(item.nama)}
                         </div>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-zinc-200">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-zinc-200">
                             {item.nama}
                           </span>
-                          <span className="text-xs text-zinc-500">
+                          <span className="text-xs text-zinc-500 truncate max-w-[200px]">
                             {item.email}
                           </span>
                         </div>
@@ -336,7 +336,7 @@ export default function KelolaPenggunaPage() {
                     </td>
 
                     {/* ROLE */}
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 align-middle text-left">
                       <span
                         className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ${
                           item.role === "Admin"
@@ -351,12 +351,12 @@ export default function KelolaPenggunaPage() {
                     </td>
 
                     {/* TANGGAL BERGABUNG */}
-                    <td className="px-6 py-4 text-zinc-400">
+                    <td className="px-6 py-4 align-middle text-left text-zinc-400 text-xs">
                       {formatDate(item.tanggalBergabung)}
                     </td>
 
                     {/* STATUS */}
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 align-middle text-left">
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
                           item.status === "Active"
@@ -376,15 +376,15 @@ export default function KelolaPenggunaPage() {
                     </td>
 
                     {/* AKSI */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-1">
+                    <td className="px-6 py-4 align-middle text-center">
+                      <div className="flex items-center justify-center gap-1.5">
                         {/* Tombol Edit */}
                         <Link
                           href={`/admin/pengguna/hal_pengguna?id=${item.id}`}
                           aria-label={`Edit ${item.nama}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800 hover:text-cyan-400"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 text-zinc-400 transition hover:border-cyan-500/50 hover:bg-cyan-500/10 hover:text-cyan-400"
                         >
-                          <Pencil size={16} />
+                          <Pencil size={15} />
                         </Link>
 
                         {/* Tombol Hapus */}
@@ -392,9 +392,9 @@ export default function KelolaPenggunaPage() {
                           type="button"
                           onClick={() => setDeleteTarget(item)}
                           aria-label={`Hapus ${item.nama}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-500/10 hover:text-red-400"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 text-zinc-400 transition hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </td>

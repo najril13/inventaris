@@ -283,11 +283,11 @@ export default function PetugasDashboardPage() {
                 <table className="w-full min-w-160 text-left text-sm">
                   <thead className="border-b border-zinc-800 bg-[#151616] text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                     <tr>
-                      <th className="px-6 py-3.5">Kode / Peminjam</th>
-                      <th className="px-6 py-3.5">Barang</th>
-                      <th className="px-6 py-3.5">Serial Number</th>
-                      <th className="px-6 py-3.5">Jadwal Pinjam</th>
-                      <th className="px-6 py-3.5 text-center">Tindakan Petugas</th>
+                      <th className="px-6 py-4 align-middle text-left">Kode & Peminjam</th>
+                      <th className="px-6 py-4 align-middle text-left">Barang</th>
+                      <th className="px-6 py-4 align-middle text-left">Serial Number</th>
+                      <th className="px-6 py-4 align-middle text-left">Jadwal Pinjam</th>
+                      <th className="px-6 py-4 align-middle text-center">Tindakan Petugas</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/60">
@@ -296,28 +296,32 @@ export default function PetugasDashboardPage() {
                         key={req.id}
                         className="transition-colors hover:bg-white/[0.02]"
                       >
-                        <td className="px-6 py-4">
-                          <p className="font-mono text-xs font-bold text-cyan-400">
-                            {req.kodeTransaksi}
-                          </p>
-                          <p className="mt-0.5 text-sm font-semibold text-zinc-200">
-                            {req.pengguna.nama}
-                          </p>
-                          <p className="text-[11px] text-zinc-500">
-                            {req.pengguna.email}
-                          </p>
+                        <td className="px-6 py-4 align-middle text-left">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-mono text-xs font-bold text-cyan-400">
+                              {req.kodeTransaksi}
+                            </span>
+                            <span className="text-sm font-semibold text-zinc-200">
+                              {req.pengguna.nama}
+                            </span>
+                            <span className="text-[11px] text-zinc-500 truncate max-w-[180px]">
+                              {req.pengguna.email}
+                            </span>
+                          </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <p className="font-semibold text-zinc-200">
-                            {req.barang.nama}
-                          </p>
-                          {req.keperluan && (
-                            <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500 italic">
-                              &quot;{req.keperluan}&quot;
-                            </p>
-                          )}
+                        <td className="px-6 py-4 align-middle text-left">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-semibold text-zinc-200">
+                              {req.barang.nama}
+                            </span>
+                            {req.keperluan && (
+                              <p className="line-clamp-1 max-w-[200px] text-xs text-zinc-500 italic">
+                                &quot;{req.keperluan}&quot;
+                              </p>
+                            )}
+                          </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 align-middle text-left">
                           {req.unit?.serialNumber ? (
                             <span className="inline-flex items-center gap-1 rounded border border-cyan-800/40 bg-cyan-950/60 px-2 py-0.5 font-mono text-xs font-semibold text-cyan-400">
                               SN: {req.unit.serialNumber}
@@ -328,15 +332,17 @@ export default function PetugasDashboardPage() {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-xs">
-                          <p className="text-zinc-400">
-                            Mulai: {formatDate(req.tanggalPinjam)}
-                          </p>
-                          <p className="font-semibold text-amber-400/90">
-                            Batas: {formatDate(req.tenggatWaktu)}
-                          </p>
+                        <td className="px-6 py-4 align-middle text-left text-xs">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-zinc-400">
+                              Mulai: <span className="text-zinc-300 font-medium">{formatDate(req.tanggalPinjam)}</span>
+                            </span>
+                            <span className="font-semibold text-amber-400/90">
+                              Batas: {formatDate(req.tenggatWaktu)}
+                            </span>
+                          </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 align-middle text-center">
                           <div className="flex items-center justify-center gap-2">
                             <Button
                               size="sm"
@@ -408,11 +414,11 @@ export default function PetugasDashboardPage() {
                 <table className="w-full min-w-160 text-left text-sm">
                   <thead className="border-b border-zinc-800 bg-[#151616] text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                     <tr>
-                      <th className="px-6 py-3.5">Kode Transaksi</th>
-                      <th className="px-6 py-3.5">Peminjam</th>
-                      <th className="px-6 py-3.5">Barang & SN</th>
-                      <th className="px-6 py-3.5">Batas Pengembalian</th>
-                      <th className="px-6 py-3.5 text-center">Aksi Pengembalian</th>
+                      <th className="px-6 py-4 align-middle text-left">Kode Transaksi</th>
+                      <th className="px-6 py-4 align-middle text-left">Peminjam</th>
+                      <th className="px-6 py-4 align-middle text-left">Barang & SN</th>
+                      <th className="px-6 py-4 align-middle text-left">Batas Pengembalian</th>
+                      <th className="px-6 py-4 align-middle text-center">Aksi Pengembalian</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/60">
@@ -421,44 +427,54 @@ export default function PetugasDashboardPage() {
                         key={loan.id}
                         className="transition-colors hover:bg-white/[0.02]"
                       >
-                        <td className="px-6 py-4 font-mono text-xs font-bold text-cyan-400">
+                        <td className="px-6 py-4 align-middle text-left font-mono text-xs font-bold text-cyan-400">
                           {loan.kodeTransaksi}
                         </td>
-                        <td className="px-6 py-4">
-                          <p className="font-semibold text-zinc-200">
-                            {loan.pengguna.nama}
-                          </p>
-                          <p className="text-[11px] text-zinc-500">
-                            {loan.pengguna.email}
-                          </p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="font-semibold text-zinc-200">
-                            {loan.barang.nama}
-                          </p>
-                          {loan.unit?.serialNumber && (
-                            <span className="inline-flex items-center rounded bg-cyan-950/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-cyan-400 border border-cyan-800/40">
-                              SN: {loan.unit.serialNumber}
+                        <td className="px-6 py-4 align-middle text-left">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-semibold text-zinc-200">
+                              {loan.pengguna.nama}
                             </span>
-                          )}
+                            <span className="text-[11px] text-zinc-500 truncate max-w-[180px]">
+                              {loan.pengguna.email}
+                            </span>
+                          </div>
                         </td>
-                        <td className="px-6 py-4 text-xs">
+                        <td className="px-6 py-4 align-middle text-left">
+                          <div className="flex flex-col gap-1">
+                            <span className="font-semibold text-zinc-200">
+                              {loan.barang.nama}
+                            </span>
+                            {loan.unit?.serialNumber ? (
+                              <span className="inline-flex w-fit items-center rounded border border-cyan-800/40 bg-cyan-950/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-cyan-400">
+                                SN: {loan.unit.serialNumber}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-zinc-500">
+                                1 Unit Fisik
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 align-middle text-left text-xs">
                           <span className="font-semibold text-amber-400">
                             {formatDate(loan.tenggatWaktu)}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <Button
-                            size="sm"
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-500/15 px-3 py-1.5 text-xs font-semibold text-cyan-400 hover:bg-cyan-500/25"
-                            isDisabled={processingId === loan.id}
-                            onPress={() =>
-                              handleDecision(loan.id, "DIKEMBALIKAN")
-                            }
-                          >
-                            <RotateCcw size={14} />
-                            Kembalikan
-                          </Button>
+                        <td className="px-6 py-4 align-middle text-center">
+                          <div className="flex items-center justify-center">
+                            <Button
+                              size="sm"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-500/15 px-3 py-1.5 text-xs font-semibold text-cyan-400 hover:bg-cyan-500/25"
+                              isDisabled={processingId === loan.id}
+                              onPress={() =>
+                                handleDecision(loan.id, "DIKEMBALIKAN")
+                              }
+                            >
+                              <RotateCcw size={14} />
+                              Kembalikan
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}

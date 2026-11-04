@@ -345,21 +345,21 @@ export function KelolaUnitSection({
       <div className="mt-5 overflow-x-auto">
         <table className="w-full min-w-160 border-collapse text-xs">
           <thead>
-            <tr className="border-b border-zinc-800 text-zinc-500 text-left font-semibold uppercase tracking-wider">
-              <th className="py-3 px-3">No</th>
-              <th className="py-3 px-3">Nomor Seri (SN)</th>
-              <th className="py-3 px-3">Kode Unit</th>
-              <th className="py-3 px-3">Kondisi</th>
-              <th className="py-3 px-3">Status</th>
-              <th className="py-3 px-3">Peminjam Saat Ini</th>
-              <th className="py-3 px-3 text-right">Aksi</th>
+            <tr className="border-b border-zinc-800 bg-[#121313] text-zinc-400 font-semibold uppercase tracking-wider">
+              <th className="py-3.5 px-4 align-middle text-center w-12">No</th>
+              <th className="py-3.5 px-4 align-middle text-left">Nomor Seri (SN)</th>
+              <th className="py-3.5 px-4 align-middle text-left">Kode Unit</th>
+              <th className="py-3.5 px-4 align-middle text-left">Kondisi</th>
+              <th className="py-3.5 px-4 align-middle text-center">Status</th>
+              <th className="py-3.5 px-4 align-middle text-left">Peminjam Saat Ini</th>
+              <th className="py-3.5 px-4 align-middle text-center">Aksi</th>
             </tr>
           </thead>
 
           <tbody className="divide-y divide-zinc-800/60">
             {units.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-zinc-500">
+                <td colSpan={7} className="py-8 text-center text-zinc-500 align-middle">
                   Belum ada unit fisik ber-SN untuk barang ini. Klik &quot;Tambah Unit&quot; untuk menambahkan.
                 </td>
               </tr>
@@ -369,14 +369,14 @@ export function KelolaUnitSection({
 
                 return (
                   <tr key={u.id} className="hover:bg-white/1.5 transition-colors">
-                    <td className="py-3 px-3 font-mono text-zinc-500">{idx + 1}</td>
-                    <td className="py-3 px-3 font-mono font-bold text-cyan-400">
+                    <td className="py-3.5 px-4 align-middle text-center font-mono text-zinc-500">{idx + 1}</td>
+                    <td className="py-3.5 px-4 align-middle text-left font-mono font-bold text-cyan-400">
                       {u.serialNumber}
                     </td>
-                    <td className="py-3 px-3 font-mono text-zinc-400">
+                    <td className="py-3.5 px-4 align-middle text-left font-mono text-zinc-400">
                       {u.kodeUnit || "-"}
                     </td>
-                    <td className="py-3 px-3">
+                    <td className="py-3.5 px-4 align-middle text-left">
                       <select
                         value={u.kondisi}
                         disabled={editingKondisiId === u.id}
@@ -388,8 +388,12 @@ export function KelolaUnitSection({
                         <option value="RUSAK_BERAT">Rusak Berat</option>
                       </select>
                     </td>
-                    <td className="py-3 px-3">{renderStatusBadge(u.status)}</td>
-                    <td className="py-3 px-3 text-zinc-400">
+                    <td className="py-3.5 px-4 align-middle text-center">
+                      <div className="flex items-center justify-center">
+                        {renderStatusBadge(u.status)}
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 align-middle text-left text-zinc-400">
                       {activeLoan ? (
                         <span className="font-medium text-zinc-200">
                           {activeLoan.pengguna.nama}
@@ -398,19 +402,21 @@ export function KelolaUnitSection({
                         <span className="text-zinc-600">-</span>
                       )}
                     </td>
-                    <td className="py-3 px-3 text-right">
-                      {u.status !== "DIPINJAM" ? (
-                        <button
-                          type="button"
-                          onClick={() => setDeleteTarget(u)}
-                          aria-label={`Hapus unit ${u.serialNumber}`}
-                          className="rounded-lg p-1.5 text-zinc-500 hover:bg-red-500/10 hover:text-red-400 transition"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      ) : (
-                        <span className="text-[10px] text-zinc-600">Dipinjam</span>
-                      )}
+                    <td className="py-3.5 px-4 align-middle text-center">
+                      <div className="flex items-center justify-center">
+                        {u.status !== "DIPINJAM" ? (
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(u)}
+                            aria-label={`Hapus unit ${u.serialNumber}`}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-700/60 text-zinc-400 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 transition"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-zinc-600">Dipinjam</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

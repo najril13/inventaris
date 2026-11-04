@@ -95,26 +95,26 @@ export function BarangTable({
       <div className="overflow-x-auto">
         <table className="w-full min-w-180 border-collapse text-sm">
           <thead>
-            <tr className="border-b border-zinc-800 bg-white/1.5">
-              <th className="w-16 px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            <tr className="border-b border-zinc-800 bg-white/1.5 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              <th className="w-16 px-6 py-4 align-middle text-center">
                 Gambar
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              <th className="px-5 py-4 align-middle text-left">
                 Nama Barang
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              <th className="px-5 py-4 align-middle text-left">
                 Kategori
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              <th className="px-5 py-4 align-middle text-left">
                 SKU
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              <th className="px-5 py-4 align-middle text-center">
                 Ketersediaan Unit
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              <th className="px-5 py-4 align-middle text-center">
                 Status
               </th>
-              <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              <th className="px-6 py-4 align-middle text-right">
                 Aksi
               </th>
             </tr>
@@ -125,7 +125,7 @@ export function BarangTable({
               <tr>
                 <td
                   colSpan={7}
-                  className="px-6 py-14 text-center text-sm text-zinc-500"
+                  className="px-6 py-14 text-center text-sm text-zinc-500 align-middle"
                 >
                   Memuat data barang...
                 </td>
@@ -136,7 +136,7 @@ export function BarangTable({
               <tr>
                 <td
                   colSpan={7}
-                  className="px-6 py-14 text-center text-sm text-red-400"
+                  className="px-6 py-14 text-center text-sm text-red-400 align-middle"
                 >
                   {error}
                 </td>
@@ -154,55 +154,65 @@ export function BarangTable({
                     key={item.id}
                     className="border-b border-zinc-800/70 transition-colors last:border-b-0 hover:bg-white/2"
                   >
-                    <td className="px-6 py-4">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-800/80">
+                    <td className="px-6 py-4 align-middle text-center">
+                      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-700/80 bg-zinc-800/80 shadow-inner">
                         <Package size={20} className="text-cyan-400" />
                       </div>
                     </td>
 
-                    <td className="px-4 py-4 align-middle">
-                      <p className="font-medium text-zinc-200">{item.nama}</p>
-                      <p className="mt-0.5 text-xs text-zinc-600">
-                        ID: {item.id}
-                      </p>
+                    <td className="px-5 py-4 align-middle text-left">
+                      <div className="flex flex-col gap-0.5">
+                        <p className="font-semibold text-zinc-100">{item.nama}</p>
+                        <p className="text-xs text-zinc-500 font-mono">
+                          ID: {item.id}
+                        </p>
+                      </div>
                     </td>
 
-                    <td className="px-4 py-4 align-middle">
+                    <td className="px-5 py-4 align-middle text-left">
                       <span className="inline-flex items-center rounded-full border border-zinc-700 bg-zinc-800/60 px-2.5 py-1 text-xs font-medium text-zinc-300">
                         {namaKategori}
                       </span>
                     </td>
 
-                    <td className="px-4 py-4 align-middle font-mono text-xs text-zinc-400">
+                    <td className="px-5 py-4 align-middle text-left font-mono text-xs text-zinc-400">
                       {item.sku}
                     </td>
 
-                    <td className="px-4 py-4 align-middle">
-                      <span className="text-zinc-300 font-medium">
+                    <td className="px-5 py-4 align-middle text-center">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${
+                          item.stok > 0
+                            ? "bg-zinc-800 text-zinc-200 border border-zinc-700"
+                            : "bg-red-500/10 text-red-400 border border-red-500/20"
+                        }`}
+                      >
                         {item.stok > 0 ? "1 Unit" : "0 Unit"}
                       </span>
                     </td>
 
-                    <td className="px-4 py-4 align-middle">
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${status.className}`}
-                      >
-                        {item.status === "TERSEDIA"
-                          ? "Tersedia"
-                          : item.status === "DIPINJAM"
-                          ? "Dipinjam"
-                          : status.label}
-                      </span>
+                    <td className="px-5 py-4 align-middle text-center">
+                      <div className="flex items-center justify-center">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${status.className}`}
+                        >
+                          {item.status === "TERSEDIA"
+                            ? "Tersedia"
+                            : item.status === "DIPINJAM"
+                            ? "Dipinjam"
+                            : status.label}
+                        </span>
+                      </div>
                     </td>
 
-                    <td className="px-6 py-4 align-middle">
-                      <div className="flex items-center justify-end gap-1">
+                    <td className="px-6 py-4 align-middle text-right">
+                      <div className="flex items-center justify-end gap-1.5">
                         <Link
                           href={`${editBasePath}/${item.id}`}
                           aria-label={`Edit ${item.nama}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-800 hover:text-cyan-400"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 text-zinc-400 transition hover:border-cyan-500/50 hover:bg-cyan-500/10 hover:text-cyan-400"
                         >
-                          <Pencil size={16} />
+                          <Pencil size={15} />
                         </Link>
 
                         <button
@@ -210,9 +220,9 @@ export function BarangTable({
                           aria-label={`Hapus ${item.nama}`}
                           onClick={() => onDelete(item.id, item.nama)}
                           disabled={deletingId === item.id}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-500/10 hover:text-red-400 disabled:opacity-40"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700/60 bg-zinc-800/60 text-zinc-400 transition hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-40"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </td>
