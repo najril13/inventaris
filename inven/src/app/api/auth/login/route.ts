@@ -48,8 +48,27 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 },
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error login:", error);
+
+    const err = error as { code?: string; message?: string };
+    const isDbError =
+      err?.code === "P2039" ||
+      err?.code === "P1001" ||
+      err?.message?.includes("pool timeout") ||
+      err?.message?.includes("ECONNREFUSED") ||
+      err?.message?.includes("connect");
+
+    if (isDbError) {
+      return NextResponse.json(
+        {
+          error:
+            "Gagal terhubung ke database. Pastikan MySQL di XAMPP sudah diaktifkan (Start).",
+        },
+        { status: 503 },
+      );
+    }
+
     return NextResponse.json(
       { error: "Terjadi kesalahan pada server" },
       { status: 500 },
