@@ -24,7 +24,8 @@ type StatusPengguna = "Active" | "Inactive";
 type Pengguna = {
   id: string;
   nama: string;
-  email: string;
+  username: string;
+  email: string | null;
   role: RolePengguna;
   tanggalBergabung: string;
   status: StatusPengguna;
@@ -176,9 +177,11 @@ export default function KelolaPenggunaPage() {
   // Filter Data
   const filteredData = useMemo(() => {
     return penggunaList.filter((item) => {
+      const q = query.toLowerCase();
       const matchQuery =
-        item.nama.toLowerCase().includes(query.toLowerCase()) ||
-        item.email.toLowerCase().includes(query.toLowerCase());
+        item.nama.toLowerCase().includes(q) ||
+        (item.username && item.username.toLowerCase().includes(q)) ||
+        (item.email && item.email.toLowerCase().includes(q));
       const matchRole = roleFilter === "ALL" || item.role === roleFilter;
       const matchStatus = statusFilter === "ALL" || item.status === statusFilter;
       return matchQuery && matchRole && matchStatus;
@@ -287,7 +290,7 @@ export default function KelolaPenggunaPage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari berdasarkan nama atau email..."
+              placeholder="Cari berdasarkan nama, username, atau email..."
               className="w-full bg-transparent text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none"
             />
           </div>
@@ -404,9 +407,14 @@ export default function KelolaPenggunaPage() {
                             <span className="font-semibold text-zinc-200">
                               {item.nama}
                             </span>
-                            <span className="text-xs text-zinc-500 truncate max-w-[200px]">
-                              {item.email}
+                            <span className="text-xs font-medium text-cyan-400">
+                              @{item.username}
                             </span>
+                            {item.email && (
+                              <span className="text-[11px] text-zinc-500 truncate max-w-[200px]">
+                                {item.email}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -519,7 +527,7 @@ export default function KelolaPenggunaPage() {
       <ConfirmDialog
         isOpen={Boolean(deleteTarget)}
         title="Hapus Akun Pengguna"
-        description={`Apakah Anda yakin ingin menghapus akun "${deleteTarget?.nama}" (${deleteTarget?.email})? Tindakan ini akan menghapus seluruh data sesi pengguna tersebut dan tidak dapat dibatalkan.`}
+        description={`Apakah Anda yakin ingin menghapus akun "${deleteTarget?.nama}" (@${deleteTarget?.username})? Tindakan ini akan menghapus seluruh data sesi pengguna tersebut dan tidak dapat dibatalkan.`}
         confirmLabel="Hapus Pengguna"
         isLoading={isDeleting}
         onConfirm={handleConfirmDelete}
@@ -536,8 +544,8 @@ export default function KelolaPenggunaPage() {
         }
         description={
           statusTarget?.status === "Active"
-            ? `Apakah Anda yakin ingin menonaktifkan akun "${statusTarget?.nama}" (${statusTarget?.email})? Pengguna ini tidak akan bisa login ke dalam sistem dan sesi yang sedang aktif akan langsung diakhiri.`
-            : `Apakah Anda yakin ingin mengaktifkan kembali akun "${statusTarget?.nama}" (${statusTarget?.email})? Pengguna akan dapat login dan menggunakan sistem kembali.`
+            ? `Apakah Anda yakin ingin menonaktifkan akun "${statusTarget?.nama}" (@${statusTarget?.username})? Pengguna ini tidak akan bisa login ke dalam sistem dan sesi yang sedang aktif akan langsung diakhiri.`
+            : `Apakah Anda yakin ingin mengaktifkan kembali akun "${statusTarget?.nama}" (@${statusTarget?.username})? Pengguna akan dapat login dan menggunakan sistem kembali.`
         }
         confirmLabel={
           statusTarget?.status === "Active"

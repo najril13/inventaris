@@ -871,6 +871,7 @@ export type JenisBarangScalarFieldEnum = (typeof JenisBarangScalarFieldEnum)[key
 export const PenggunaScalarFieldEnum = {
   id: 'id',
   nama: 'nama',
+  username: 'username',
   email: 'email',
   password: 'password',
   role: 'role',
@@ -975,6 +976,7 @@ export type JenisBarangOrderByRelevanceFieldEnum = (typeof JenisBarangOrderByRel
 export const PenggunaOrderByRelevanceFieldEnum = {
   id: 'id',
   nama: 'nama',
+  username: 'username',
   email: 'email',
   password: 'password',
   role: 'role',

@@ -31,6 +31,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       select: {
         id: true,
         nama: true,
+        username: true,
         email: true,
         role: true,
         status: true,
@@ -69,7 +70,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     const { id } = await params;
     const body = await request.json();
-    const { nama, email, role, status, password } = body;
+    const { nama, username, email, role, status, password } = body;
 
     const existingUser = await prisma.pengguna.findUnique({
       where: { id },
@@ -134,7 +135,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     const updateData: {
       nama?: string;
-      email?: string;
+      username?: string;
+      email?: string | null;
       role?: string;
       status?: string;
       password?: string;
@@ -150,25 +152,61 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       updateData.nama = nama.trim();
     }
 
-    if (email !== undefined) {
-      const normalizedEmail = email.trim().toLowerCase();
-      if (!normalizedEmail) {
+    if (username !== undefined) {
+      const cleanUsername = String(username).trim().toLowerCase();
+      if (!cleanUsername) {
         return NextResponse.json(
-          { error: "Email tidak boleh kosong" },
+          { error: "Username tidak boleh kosong" },
           { status: 400 },
         );
       }
-      if (normalizedEmail !== existingUser.email) {
-        const emailExists = await prisma.pengguna.findUnique({
-          where: { email: normalizedEmail },
+      if (cleanUsername.length < 3) {
+        return NextResponse.json(
+          { error: "Username minimal 3 karakter" },
+          { status: 400 },
+        );
+      }
+      if (!/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+        return NextResponse.json(
+          {
+            error:
+              "Username hanya boleh berisi huruf, angka, titik, strip (-), dan underscore (_)",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (cleanUsername !== existingUser.username) {
+        const usernameExists = await prisma.pengguna.findUnique({
+          where: { username: cleanUsername },
         });
-        if (emailExists) {
+        if (usernameExists) {
           return NextResponse.json(
-            { error: `Email "${normalizedEmail}" sudah digunakan pengguna lain` },
+            { error: `Username "${cleanUsername}" sudah digunakan pengguna lain` },
             { status: 409 },
           );
         }
-        updateData.email = normalizedEmail;
+        updateData.username = cleanUsername;
+      }
+    }
+
+    if (email !== undefined) {
+      if (!email || !String(email).trim()) {
+        updateData.email = null;
+      } else {
+        const normalizedEmail = String(email).trim().toLowerCase();
+        if (normalizedEmail !== existingUser.email) {
+          const emailExists = await prisma.pengguna.findUnique({
+            where: { email: normalizedEmail },
+          });
+          if (emailExists) {
+            return NextResponse.json(
+              { error: `Email "${normalizedEmail}" sudah digunakan pengguna lain` },
+              { status: 409 },
+            );
+          }
+          updateData.email = normalizedEmail;
+        }
       }
     }
 
@@ -210,6 +248,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       select: {
         id: true,
         nama: true,
+        username: true,
         email: true,
         role: true,
         status: true,

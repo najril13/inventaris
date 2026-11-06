@@ -19,6 +19,7 @@ export async function GET() {
         data: {
           id: session.id,
           nama: session.nama,
+          username: session.username,
           email: session.email,
           role: session.role,
           status: session.status,
@@ -36,7 +37,7 @@ export async function GET() {
   }
 }
 
-// PATCH /api/auth/profile - Update profil (ganti nama, email, atau ganti password)
+// PATCH /api/auth/profile - Update profil (ganti nama, username, email, atau ganti password)
 export async function PATCH(request: NextRequest) {
   try {
     const session = await getSession();
@@ -48,11 +49,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { nama, email, currentPassword, newPassword } = body;
+    const { nama, username, email, currentPassword, newPassword } = body;
 
     const updateData: {
       nama?: string;
-      email?: string;
+      username?: string;
+      email?: string | null;
       password?: string;
     } = {};
 
@@ -68,32 +70,71 @@ export async function PATCH(request: NextRequest) {
       updateData.nama = trimmedNama;
     }
 
-    // 2. Ganti Email
-    if (email !== undefined) {
-      const normalizedEmail = email.trim().toLowerCase();
-      if (!normalizedEmail) {
+    // 2. Ganti Username
+    if (username !== undefined) {
+      const cleanUsername = username.trim().toLowerCase();
+      if (!cleanUsername) {
         return NextResponse.json(
-          { error: "Alamat email tidak boleh kosong" },
+          { error: "Username tidak boleh kosong" },
+          { status: 400 },
+        );
+      }
+      if (cleanUsername.length < 3) {
+        return NextResponse.json(
+          { error: "Username minimal 3 karakter" },
+          { status: 400 },
+        );
+      }
+      if (!/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+        return NextResponse.json(
+          {
+            error:
+              "Username hanya boleh huruf, angka, titik (.), strip (-), dan underscore (_)",
+          },
           { status: 400 },
         );
       }
 
-      if (normalizedEmail !== session.email.toLowerCase()) {
-        const emailInUse = await prisma.pengguna.findUnique({
-          where: { email: normalizedEmail },
+      if (cleanUsername !== session.username.toLowerCase()) {
+        const usernameInUse = await prisma.pengguna.findUnique({
+          where: { username: cleanUsername },
         });
 
-        if (emailInUse) {
+        if (usernameInUse) {
           return NextResponse.json(
-            { error: `Email "${normalizedEmail}" sudah digunakan akun lain` },
+            { error: `Username "${cleanUsername}" sudah digunakan akun lain` },
             { status: 409 },
           );
         }
-        updateData.email = normalizedEmail;
+        updateData.username = cleanUsername;
       }
     }
 
-    // 3. Ganti Password
+    // 3. Ganti Email
+    if (email !== undefined) {
+      const trimmedEmail = email.trim();
+      const normalizedEmail = trimmedEmail ? trimmedEmail.toLowerCase() : null;
+
+      if (normalizedEmail) {
+        if (normalizedEmail !== (session.email?.toLowerCase() || "")) {
+          const emailInUse = await prisma.pengguna.findUnique({
+            where: { email: normalizedEmail },
+          });
+
+          if (emailInUse) {
+            return NextResponse.json(
+              { error: `Email "${normalizedEmail}" sudah digunakan akun lain` },
+              { status: 409 },
+            );
+          }
+          updateData.email = normalizedEmail;
+        }
+      } else if (session.email) {
+        updateData.email = null;
+      }
+    }
+
+    // 4. Ganti Password
     if (newPassword) {
       if (!currentPassword) {
         return NextResponse.json(
@@ -134,6 +175,7 @@ export async function PATCH(request: NextRequest) {
       select: {
         id: true,
         nama: true,
+        username: true,
         email: true,
         role: true,
         status: true,

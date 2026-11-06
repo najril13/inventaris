@@ -16,6 +16,7 @@ import {
 export default function RegisterPage() {
   const router = useRouter();
   const [nama, setNama] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -32,7 +33,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nama, email, password }),
+        body: JSON.stringify({ nama, username, email, password }),
       });
 
       const result = await res.json();
@@ -110,13 +111,31 @@ export default function RegisterPage() {
 
           <div>
             <Label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Email
+              Username
+            </Label>
+            <div className="flex h-11 items-center gap-3 rounded-xl border border-zinc-700 bg-[#101111] px-4 transition-colors focus-within:border-cyan-500">
+              <span className="shrink-0 text-xs font-bold text-zinc-500">@</span>
+              <input
+                type="text"
+                required
+                autoCapitalize="none"
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                placeholder="username (tanpa spasi)"
+                className="h-full w-full bg-transparent text-sm text-zinc-200 outline-none placeholder:text-zinc-600"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              Email <span className="text-[10px] text-zinc-600 font-normal">(Opsional)</span>
             </Label>
             <div className="flex h-11 items-center gap-3 rounded-xl border border-zinc-700 bg-[#101111] px-4 transition-colors focus-within:border-cyan-500">
               <Mail size={16} className="shrink-0 text-zinc-500" />
               <input
                 type="email"
-                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nama@sekolah.com"

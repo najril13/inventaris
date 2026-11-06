@@ -5,20 +5,32 @@ import { createSession } from "@/src/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const username = body.username || body.email; // fallback jika ada payload lama
+    const { password } = body;
 
-    if (!email || !password) {
+    if (!username || !password) {
       return NextResponse.json(
-        { error: "Email dan password wajib diisi" },
+        { error: "Username dan password wajib diisi" },
         { status: 400 },
       );
     }
 
-    const pengguna = await prisma.pengguna.findUnique({ where: { email } });
+    const cleanUsername = String(username).trim().toLowerCase();
+
+    // Cari pengguna berdasarkan username (atau email sebagai toleransi transisi)
+    const pengguna = await prisma.pengguna.findFirst({
+      where: {
+        OR: [
+          { username: cleanUsername },
+          { email: cleanUsername },
+        ],
+      },
+    });
 
     if (!pengguna) {
       return NextResponse.json(
-        { error: "Email atau password salah" },
+        { error: "Username atau password salah" },
         { status: 401 },
       );
     }
@@ -34,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     if (!isValidPassword) {
       return NextResponse.json(
-        { error: "Email atau password salah" },
+        { error: "Username atau password salah" },
         { status: 401 },
       );
     }
@@ -44,7 +56,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         message: "Login berhasil",
-        data: { id: pengguna.id, nama: pengguna.nama, role: pengguna.role },
+        data: {
+          id: pengguna.id,
+          nama: pengguna.nama,
+          username: pengguna.username,
+          role: pengguna.role,
+        },
       },
       { status: 200 },
     );

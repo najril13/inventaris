@@ -19,6 +19,7 @@ export async function GET() {
       select: {
         id: true,
         nama: true,
+        username: true,
         email: true,
         role: true,
         status: true,
@@ -49,7 +50,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { nama, email, password, role = "User", status = "Active" } = body;
+    const {
+      nama,
+      username,
+      email,
+      password,
+      role = "User",
+      status = "Active",
+    } = body;
 
     if (!nama || !nama.trim()) {
       return NextResponse.json(
@@ -58,10 +66,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!email || !email.trim()) {
+    if (!username || !username.trim()) {
       return NextResponse.json(
-        { error: "Email wajib diisi" },
+        { error: "Username wajib diisi" },
         { status: 400 },
+      );
+    }
+
+    const cleanUsername = String(username).trim().toLowerCase();
+    if (cleanUsername.length < 3) {
+      return NextResponse.json(
+        { error: "Username minimal 3 karakter" },
+        { status: 400 },
+      );
+    }
+
+    if (!/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+      return NextResponse.json(
+        {
+          error:
+            "Username hanya boleh berisi huruf, angka, titik, strip (-), dan underscore (_)",
+        },
+        { status: 400 },
+      );
+    }
+
+    const existingUsername = await prisma.pengguna.findUnique({
+      where: { username: cleanUsername },
+    });
+
+    if (existingUsername) {
+      return NextResponse.json(
+        { error: `Username "${cleanUsername}" sudah digunakan akun lain` },
+        { status: 409 },
       );
     }
 
@@ -88,17 +125,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    let normalizedEmail: string | null = null;
+    if (email && String(email).trim()) {
+      normalizedEmail = String(email).trim().toLowerCase();
+      const existingEmail = await prisma.pengguna.findUnique({
+        where: { email: normalizedEmail },
+      });
 
-    const existing = await prisma.pengguna.findUnique({
-      where: { email: normalizedEmail },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: `Email "${normalizedEmail}" sudah terdaftar` },
-        { status: 409 },
-      );
+      if (existingEmail) {
+        return NextResponse.json(
+          { error: `Email "${normalizedEmail}" sudah terdaftar` },
+          { status: 409 },
+        );
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -106,6 +145,7 @@ export async function POST(request: NextRequest) {
     const pengguna = await prisma.pengguna.create({
       data: {
         nama: nama.trim(),
+        username: cleanUsername,
         email: normalizedEmail,
         password: hashedPassword,
         role,
@@ -114,6 +154,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         nama: true,
+        username: true,
         email: true,
         role: true,
         status: true,

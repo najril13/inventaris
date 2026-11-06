@@ -3,11 +3,11 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Label } from "@heroui/react";
-import { Eye, EyeOff, LogIn, Lock, Mail, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, LogIn, Lock, User, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -22,13 +22,13 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       const result = await res.json();
 
       if (!res.ok) {
-        setError(result.error || "Email atau password salah");
+        setError(result.error || "Username atau password salah");
         setLoading(false);
         return;
       }
@@ -59,7 +59,7 @@ export default function LoginPage() {
             Inven Sekolah
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Masuk untuk mengakses sistem inventaris
+            Masuk dengan username untuk mengakses sistem
           </p>
         </div>
 
@@ -73,19 +73,21 @@ export default function LoginPage() {
 
         {/* FORM */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* EMAIL */}
+          {/* USERNAME */}
           <div>
             <Label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Email
+              Username
             </Label>
             <div className="flex h-11 items-center gap-3 rounded-xl border border-zinc-700 bg-[#101111] px-4 transition-colors focus-within:border-cyan-500">
-              <Mail size={16} className="shrink-0 text-zinc-500" />
+              <User size={16} className="shrink-0 text-zinc-500" />
               <input
-                type="email"
+                type="text"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="nama@sekolah.com"
+                autoComplete="username"
+                autoCapitalize="none"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Masukkan username"
                 className="h-full w-full bg-transparent text-sm text-zinc-200 outline-none placeholder:text-zinc-600"
               />
             </div>

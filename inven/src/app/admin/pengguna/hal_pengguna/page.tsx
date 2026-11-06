@@ -35,6 +35,7 @@ function FormPenggunaContent() {
 
   // Form states
   const [nama, setNama] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"Admin" | "Petugas" | "User">("User");
   const [status, setStatus] = useState<"Active" | "Inactive">("Active");
@@ -63,6 +64,7 @@ function FormPenggunaContent() {
 
         if (isMounted) {
           setNama(result.data.nama || "");
+          setUsername(result.data.username || "");
           setEmail(result.data.email || "");
           setRole(result.data.role || "User");
           setStatus(result.data.status || "Active");
@@ -87,7 +89,7 @@ function FormPenggunaContent() {
   // Validasi form
   const isValid =
     nama.trim() !== "" &&
-    email.trim() !== "" &&
+    username.trim().length >= 3 &&
     (isEditMode ? (password === "" || password.length >= 6) : password.length >= 6);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -100,15 +102,18 @@ function FormPenggunaContent() {
       const url = isEditMode ? `/api/pengguna/${editId}` : "/api/pengguna";
       const method = isEditMode ? "PATCH" : "POST";
 
+      const cleanUsername = username.trim().toLowerCase();
       const payload: {
         nama: string;
-        email: string;
+        username: string;
+        email?: string | null;
         role: "Admin" | "Petugas" | "User";
         status: "Active" | "Inactive";
         password?: string;
       } = {
         nama: nama.trim(),
-        email: email.trim(),
+        username: cleanUsername,
+        email: email.trim() || null,
         role,
         status,
       };
@@ -218,7 +223,7 @@ function FormPenggunaContent() {
                 Informasi Akun
               </h3>
               <p className={SECTION_SUBTITLE_CLASS}>
-                Data identitas dan email yang digunakan untuk login.
+                Data identitas dan username yang digunakan untuk login.
               </p>
             </div>
 
@@ -244,8 +249,36 @@ function FormPenggunaContent() {
               </div>
 
               <div>
+                <label htmlFor="username-pengguna" className={LABEL_CLASS}>
+                  Username * (Untuk Login)
+                </label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-4 font-semibold text-zinc-500">
+                    @
+                  </span>
+                  <input
+                    id="username-pengguna"
+                    type="text"
+                    value={username}
+                    onChange={(e) =>
+                      setUsername(
+                        e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ""),
+                      )
+                    }
+                    placeholder="Contoh: ahmad123"
+                    className={`${INPUT_CLASS} pl-11`}
+                    required
+                    minLength={3}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Digunakan untuk login (minimal 3 karakter, huruf kecil, angka, titik, strip, underscore).
+                </p>
+              </div>
+
+              <div>
                 <label htmlFor="email-pengguna" className={LABEL_CLASS}>
-                  Alamat Email *
+                  Alamat Email (Opsional)
                 </label>
                 <div className="relative flex items-center">
                   <span className="absolute left-4 text-zinc-500">
@@ -258,7 +291,6 @@ function FormPenggunaContent() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Contoh: ahmad@sekolah.sch.id"
                     className={`${INPUT_CLASS} pl-11`}
-                    required
                   />
                 </div>
               </div>

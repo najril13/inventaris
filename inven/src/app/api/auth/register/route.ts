@@ -4,11 +4,29 @@ import { prisma } from "@/src/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
-    const { nama, email, password } = await request.json();
+    const { nama, username, email, password } = await request.json();
 
-    if (!nama || !email || !password) {
+    if (!nama || !username || !password) {
       return NextResponse.json(
-        { error: "Nama, email, dan password wajib diisi" },
+        { error: "Nama, username, dan password wajib diisi" },
+        { status: 400 },
+      );
+    }
+
+    const cleanUsername = String(username).trim().toLowerCase();
+    if (cleanUsername.length < 3) {
+      return NextResponse.json(
+        { error: "Username minimal 3 karakter" },
+        { status: 400 },
+      );
+    }
+
+    if (!/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+      return NextResponse.json(
+        {
+          error:
+            "Username hanya boleh berisi huruf, angka, titik, strip (-), dan underscore (_)",
+        },
         { status: 400 },
       );
     }
@@ -20,12 +38,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = await prisma.pengguna.findUnique({ where: { email } });
-    if (existing) {
+    const existingUsername = await prisma.pengguna.findUnique({
+      where: { username: cleanUsername },
+    });
+    if (existingUsername) {
       return NextResponse.json(
-        { error: `Email "${email}" sudah terdaftar` },
+        {
+          error: `Username "${cleanUsername}" sudah digunakan, silakan pilih username lain`,
+        },
         { status: 409 },
       );
+    }
+
+    let normalizedEmail: string | null = null;
+    if (email && String(email).trim()) {
+      normalizedEmail = String(email).trim().toLowerCase();
+      const existingEmail = await prisma.pengguna.findUnique({
+        where: { email: normalizedEmail },
+      });
+      if (existingEmail) {
+        return NextResponse.json(
+          { error: `Email "${normalizedEmail}" sudah terdaftar` },
+          { status: 409 },
+        );
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -37,7 +73,8 @@ export async function POST(request: NextRequest) {
     const pengguna = await prisma.pengguna.create({
       data: {
         nama: nama.trim(),
-        email: email.trim().toLowerCase(),
+        username: cleanUsername,
+        email: normalizedEmail,
         password: hashedPassword,
         role: assignedRole,
       },
@@ -46,7 +83,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         message: "Akun berhasil dibuat",
-        data: { id: pengguna.id, nama: pengguna.nama, email: pengguna.email },
+        data: {
+          id: pengguna.id,
+          nama: pengguna.nama,
+          username: pengguna.username,
+          email: pengguna.email,
+        },
       },
       { status: 201 },
     );

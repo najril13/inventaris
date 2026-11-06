@@ -26,7 +26,8 @@ import {
 type ProfileData = {
   id: string;
   nama: string;
-  email: string;
+  username: string;
+  email: string | null;
   role: string;
   status: string;
   tanggalBergabung: string;
@@ -57,6 +58,7 @@ export function PengaturanAkun({ roleTitle }: { roleTitle: string }) {
 
   // State Form Profil
   const [nama, setNama] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
@@ -76,8 +78,9 @@ export function PengaturanAkun({ roleTitle }: { roleTitle: string }) {
         const result = await res.json();
         if (res.ok && result.data) {
           setProfile(result.data);
-          setNama(result.data.nama);
-          setEmail(result.data.email);
+          setNama(result.data.nama || "");
+          setUsername(result.data.username || "");
+          setEmail(result.data.email || "");
         }
       } catch (err) {
         console.error("Error loading profile:", err);
@@ -90,11 +93,17 @@ export function PengaturanAkun({ roleTitle }: { roleTitle: string }) {
     loadProfile();
   }, []);
 
-  // Handler Simpan Nama & Email
+  // Handler Simpan Nama, Username & Email
   const handleUpdateProfile = async (e: FormEvent) => {
     e.preventDefault();
-    if (!nama.trim() || !email.trim()) {
-      toast.error("Nama lengkap dan email tidak boleh kosong");
+    const cleanUsername = username.trim().toLowerCase();
+    if (!nama.trim() || !cleanUsername) {
+      toast.error("Nama lengkap dan username tidak boleh kosong");
+      return;
+    }
+
+    if (cleanUsername.length < 3) {
+      toast.error("Username minimal 3 karakter");
       return;
     }
 
@@ -103,7 +112,11 @@ export function PengaturanAkun({ roleTitle }: { roleTitle: string }) {
       const res = await fetch("/api/auth/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nama: nama.trim(), email: email.trim() }),
+        body: JSON.stringify({
+          nama: nama.trim(),
+          username: cleanUsername,
+          email: email.trim() || null,
+        }),
       });
 
       const result = await res.json();
@@ -113,8 +126,17 @@ export function PengaturanAkun({ roleTitle }: { roleTitle: string }) {
         return;
       }
 
-      toast.success("Profil Diperbarui", "Nama dan email berhasil diperbarui");
-      setProfile((prev) => (prev ? { ...prev, nama, email } : null));
+      toast.success("Profil Diperbarui", "Data profil berhasil diperbarui");
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              nama: nama.trim(),
+              username: cleanUsername,
+              email: email.trim() || null,
+            }
+          : null,
+      );
     } catch {
       toast.error("Terjadi kesalahan", "Tidak dapat terhubung ke server");
     } finally {
@@ -208,7 +230,10 @@ export function PengaturanAkun({ roleTitle }: { roleTitle: string }) {
               <h3 className="text-xl font-bold text-zinc-100">
                 {profile?.nama}
               </h3>
-              <p className="text-sm text-zinc-400">{profile?.email}</p>
+              <p className="text-sm font-semibold text-cyan-400">@{profile?.username}</p>
+              {profile?.email && (
+                <p className="text-xs text-zinc-400">{profile?.email}</p>
+              )}
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-md bg-zinc-800 px-2.5 py-0.5 text-xs font-medium text-cyan-400 border border-zinc-700">
                   Role: {profile?.role}
@@ -240,7 +265,7 @@ export function PengaturanAkun({ roleTitle }: { roleTitle: string }) {
               Informasi Profil
             </h3>
             <p className={SECTION_SUBTITLE_CLASS}>
-              Perbarui nama tampilan dan alamat email login Anda.
+              Perbarui nama tampilan, username login, dan alamat email Anda.
             </p>
           </div>
 
@@ -266,8 +291,36 @@ export function PengaturanAkun({ roleTitle }: { roleTitle: string }) {
             </div>
 
             <div>
+              <label htmlFor="input-username" className={LABEL_CLASS}>
+                Username * (Untuk Login)
+              </label>
+              <div className="relative flex items-center">
+                <span className="absolute left-4 font-semibold text-zinc-500">
+                  @
+                </span>
+                <input
+                  id="input-username"
+                  type="text"
+                  value={username}
+                  onChange={(e) =>
+                    setUsername(
+                      e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ""),
+                    )
+                  }
+                  placeholder="username_anda"
+                  className={`${INPUT_CLASS} pl-11`}
+                  required
+                  minLength={3}
+                />
+              </div>
+              <p className="mt-1 text-xs text-zinc-500">
+                Gunakan username ini untuk login. Minimal 3 karakter huruf kecil, angka, titik, strip, atau underscore.
+              </p>
+            </div>
+
+            <div>
               <label htmlFor="input-email" className={LABEL_CLASS}>
-                Alamat Email *
+                Alamat Email (Opsional)
               </label>
               <div className="relative flex items-center">
                 <span className="absolute left-4 text-zinc-500">
@@ -280,7 +333,6 @@ export function PengaturanAkun({ roleTitle }: { roleTitle: string }) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="nama@sekolah.sch.id"
                   className={`${INPUT_CLASS} pl-11`}
-                  required
                 />
               </div>
             </div>
